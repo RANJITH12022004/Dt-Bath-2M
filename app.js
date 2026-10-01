@@ -1517,6 +1517,7 @@ function resetSharedPreheatFlow() {
 async function beginSharedPreheat() {
   window.dashboardPreheatPhase = 'warming';
   window.heaterReadyForManualStart = false;
+  if (typeof syncDashboardUnifiedStartButton === 'function') syncDashboardUnifiedStartButton();
   var t = getSharedPreheatTargetC();
   var preheatResult = await sendPreheat(t, 0);
   if (preheatResult && preheatResult.error) {
@@ -1647,7 +1648,7 @@ function dualMotorBasketClick(basketId) {
     syncDashboardUnifiedStartButton();
     return;
   }
-  if (window.dashboardPreheatPhase === 'warming' || heaterOn[1] || heaterOn[2]) {
+  if (window.dashboardPreheatPhase === 'warming') {
     syncDashboardUnifiedStartButton();
     return;
   }
@@ -12265,16 +12266,19 @@ function syncDashboardUnifiedStartButton() {
         btn.classList.add('is-stop');
         btn.style.background = '#ef4444';
       } else if (armed && window.dashboardPreheatPhase === 'warming') {
-        btn.textContent = 'Preheat';
+        btn.textContent = 'Preheating';
         btn.classList.add('is-preheating');
         btn.style.background = '#f59e0b';
+        btn.style.borderColor = '#d97706';
       } else if (armed && (window.dashboardPreheatPhase === 'ready' || window.heaterReadyForManualStart)) {
         btn.textContent = 'Start';
         btn.classList.add('is-ready');
         btn.style.background = '#10b981';
+        btn.style.borderColor = '#059669';
       } else {
         btn.textContent = 'Preheat';
         btn.style.background = '#10b981';
+        btn.style.borderColor = '#6b7280';
       }
     });
     return;

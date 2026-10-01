@@ -977,6 +977,22 @@
     /* Keyboard CSS moved to keyboard.css */
     
     /* Recipe button positioning */
+    .dt-start-btn {
+        margin-top: 6px;
+        padding: 12px 48px 7px 48px;
+        border-radius: 50px;
+        background: #10b981;
+        color: #fff;
+        font-weight: 700;
+        font-size: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        border: 4px solid #6b7280;
+        cursor: pointer;
+    }
+    .dt-start-btn.is-stop { background: #ef4444; border-color: #b91c1c; }
+    .dt-start-btn.is-preheating { background: #f59e0b; border-color: #d97706; }
+    .dt-start-btn.is-ready { background: #10b981; border-color: #059669; }
+
     .recipe-button-main {
         transform: translate(-40px, 50px);
     }

@@ -9926,10 +9926,12 @@ function updateDashboardTempButton() {
     temp2El.textContent = temp2.toFixed(1) + '°C';
   }
   
-  // Show/hide per-basket Set Temp chips (under heater icons); legacy center widget optional
+  var shared = (typeof getSharedPreheatTargetC === 'function') ? getSharedPreheatTargetC() : (temp1 || temp2 || 37);
+  var bathEl = document.getElementById('dashboard-temp-bath');
+  if (bathEl) bathEl.textContent = Number(shared).toFixed(1);
   if (tempBtn) {
-    tempBtn.style.display = 'none';
-    tempBtn.style.visibility = 'hidden';
+    tempBtn.style.display = 'flex';
+    tempBtn.style.visibility = 'visible';
   }
   var basket1Section = document.getElementById('dashboard-temp-basket1-section');
   var basket2Section = document.getElementById('dashboard-temp-basket2-section');
@@ -12257,14 +12259,18 @@ function syncDashboardUnifiedStartButton() {
       btn.style.opacity = '1';
       var running = !!(testRunning[id] || (timers[id] && timers[id].running));
       var armed = window.basketMotorArmed && window.basketMotorArmed[id];
+      btn.classList.remove('is-stop', 'is-preheating', 'is-ready');
       if (running) {
         btn.textContent = 'Stop';
+        btn.classList.add('is-stop');
         btn.style.background = '#ef4444';
       } else if (armed && window.dashboardPreheatPhase === 'warming') {
-        btn.textContent = 'Preheating…';
+        btn.textContent = 'Preheat';
+        btn.classList.add('is-preheating');
         btn.style.background = '#f59e0b';
       } else if (armed && (window.dashboardPreheatPhase === 'ready' || window.heaterReadyForManualStart)) {
         btn.textContent = 'Start';
+        btn.classList.add('is-ready');
         btn.style.background = '#10b981';
       } else {
         btn.textContent = 'Preheat';

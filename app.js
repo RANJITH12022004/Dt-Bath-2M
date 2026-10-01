@@ -4714,6 +4714,8 @@ function navigateTo(s) {
       }
       if (saveBtn) saveBtn.style.display = quickBasket ? 'none' : 'flex';
       if (loadBtn) loadBtn.style.display = quickBasket ? 'flex' : 'none';
+      var batchGroup = document.getElementById('recipe-batch-group');
+      if (batchGroup) batchGroup.style.display = quickBasket ? 'block' : 'none';
     }, 200);
   }
   
@@ -9800,7 +9802,7 @@ function editRecipe(index) {
   var nameEl = document.getElementById('recipe-name');
   if (nameEl) nameEl.value = r.name || '';
   var batchEl = document.getElementById('recipe-batch');
-  if (batchEl) batchEl.value = r.batch || '';
+  if (batchEl) batchEl.value = '';
   var mediaEl = document.getElementById('recipe-media');
   if (mediaEl) mediaEl.value = r.media || '';
   var meshEl = document.getElementById('recipe-mesh');
@@ -9893,13 +9895,10 @@ function saveRecipe() {
     }
   }
   
-  var batchEl = document.getElementById('recipe-batch');
   var mediaEl = document.getElementById('recipe-media');
   var meshEl = document.getElementById('recipe-mesh');
-  var batchVal = batchEl && batchEl.value ? batchEl.value.trim() : '';
   var recipe = {
     name: name,
-    batch: batchVal,
     temp: tempStr,
     duration: durationMinutes,
     mode: modeVal,
@@ -10194,7 +10193,11 @@ function showBatchNumberPrompt(recipeName) {
         okBtn.onclick = function(e) {
           e.stopPropagation();
           var val = (inputEl && inputEl.value) ? inputEl.value.trim() : '';
-          console.log('[showBatchNumberPrompt] OK clicked, batch number:', val || '(empty)');
+          if (!val) {
+            if (typeof showToast === 'function') showToast('Batch number is required.', 'error');
+            return;
+          }
+          console.log('[showBatchNumberPrompt] OK clicked, batch number:', val);
           cleanup();
           // Small delay to ensure DOM cleanup before next modal
           setTimeout(function() {
@@ -10483,7 +10486,7 @@ async function selectRecipeForExecution(index) {
   console.log('[selectRecipeForExecution] Load choice:', choice);
 
   var productName = r.product || r.name || 'Unknown Product';
-  batchNumber = batchNumber || r.batch || 'N/A';
+  if (!batchNumber) return;
   var temperature = parseFloat(r.temp) || 37.0;
   var mode = r.mode || 'manual';
   var duration = (r.duration === 0 || r.duration) ? parseFloat(r.duration) : null;

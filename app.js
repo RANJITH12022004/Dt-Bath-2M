@@ -1517,6 +1517,9 @@ function resetSharedPreheatFlow() {
 async function beginSharedPreheat() {
   window.dashboardPreheatPhase = 'warming';
   window.heaterReadyForManualStart = false;
+  if (!window.basketMotorArmed) window.basketMotorArmed = {1: false, 2: false};
+  window.basketMotorArmed[1] = true;
+  window.basketMotorArmed[2] = true;
   if (typeof syncDashboardUnifiedStartButton === 'function') syncDashboardUnifiedStartButton();
   var t = getSharedPreheatTargetC();
   var preheatResult = await sendPreheat(t, 0);
@@ -1534,8 +1537,11 @@ async function beginSharedPreheat() {
   }
   heaterOn[1] = true;
   heaterOn[2] = true;
-  if (configuredBeakers[1]) window.preheatInProgress[1] = true;
-  if (configuredBeakers[2]) window.preheatInProgress[2] = true;
+  if (!window.basketMotorArmed) window.basketMotorArmed = {1: false, 2: false};
+  window.basketMotorArmed[1] = true;
+  window.basketMotorArmed[2] = true;
+  window.preheatInProgress[1] = true;
+  window.preheatInProgress[2] = true;
   if (typeof updateHeaterControlUI === 'function') updateHeaterControlUI();
   if (typeof syncDashboardUnifiedStartButton === 'function') syncDashboardUnifiedStartButton();
   if (typeof startPreheatTempPolling === 'function') startPreheatTempPolling(1);
@@ -1585,12 +1591,8 @@ async function reassertSharedBath() {
 
 function dualMotorBasketClick(basketId) {
   basketId = basketId === 2 ? 2 : 1;
-  if (!configuredBeakers || !configuredBeakers[basketId]) {
-    if (typeof showToast === 'function') {
-      showToast('Configure beaker ' + basketId + ' in Settings → Add Beakers', 'error');
-    }
-    return;
-  }
+  if (!configuredBeakers) configuredBeakers = {1: true, 2: true};
+  configuredBeakers[basketId] = true;
   if (!window.basketMotorArmed) window.basketMotorArmed = {1: false, 2: false};
 
   if (basketMotorRunning(basketId)) {
@@ -12239,7 +12241,6 @@ function checkTemperatureValidationReal() {
 
 function syncDashboardUnifiedStartButton() {
   var u = document.getElementById('dashboard-start-unified');
-  if (!u) return;
   var b1 = configuredBeakers && configuredBeakers[1];
   var b2 = configuredBeakers && configuredBeakers[2];
   if (isSingleSharedHeater()) {
@@ -12250,11 +12251,6 @@ function syncDashboardUnifiedStartButton() {
     [1, 2].forEach(function (id) {
       var btn = document.getElementById('start' + id);
       if (!btn) return;
-      var configured = configuredBeakers && configuredBeakers[id];
-      if (!configured) {
-        btn.style.display = 'none';
-        return;
-      }
       btn.style.display = '';
       btn.disabled = false;
       btn.style.opacity = '1';

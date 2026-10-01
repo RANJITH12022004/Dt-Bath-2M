@@ -97,6 +97,8 @@ def set_stroke_validation_active(value: bool, basket: int | None = None) -> None
     with _stroke_validation_lock:
         _stroke_validation_active = bool(value)
         _last_stroke_count_emitted = -1
+        _last_stroke_by_basket[1] = -1
+        _last_stroke_by_basket[2] = -1
         if basket is not None:
             _stroke_validation_basket = 2 if int(basket) == 2 else 1
     if _logger:
@@ -112,22 +114,39 @@ def get_stroke_validation_basket() -> int:
         return 2 if int(_stroke_validation_basket or 1) == 2 else 1
 
 
-def _stroke_count_accept_for_sse(n: int) -> bool:
+_last_stroke_by_basket = {1: -1, 2: -1}
+
+
+def _parse_stroke_reading(line: str):
+    """ESP stroke report. S1:30 / S2=12 are motor 1 and 2. Bare digits are legacy."""
+    tagged = re.fullmatch(r"S([12])\s*[:=]\s*(\d{1,6})", line.strip(), flags=re.IGNORECASE)
+    if tagged:
+        return int(tagged.group(1)), int(tagged.group(2))
+    if re.fullmatch(r"[0-9]{1,6}", line.strip()):
+        return get_stroke_validation_basket(), int(line.strip(), 10)
+    return None
+
+
+def _stroke_count_accept_for_sse(n: int, basket: int = 1) -> bool:
     """True if n should be emitted as stroke_count (monotonic, bounded, no duplicates)."""
     global _last_stroke_count_emitted
-    if n < 1 or n > _STROKE_COUNT_MAX:
+    basket = 2 if int(basket) == 2 else 1
+    if n < 0 or n > _STROKE_COUNT_MAX:
         return False
-    if _last_stroke_count_emitted >= 0:
-        if n <= _last_stroke_count_emitted:
+    last = _last_stroke_by_basket.get(basket, -1)
+    if last >= 0:
+        if n <= last:
             return False
-        if n - _last_stroke_count_emitted > _STROKE_COUNT_MAX_JUMP:
+        if n - last > _STROKE_COUNT_MAX_JUMP:
             if _logger:
                 _logger.debug(
-                    "[STROKE VAL] ignored bogus stroke jump %s -> %s",
-                    _last_stroke_count_emitted,
+                    "[STROKE VAL] ignored bogus stroke jump basket %s %s -> %s",
+                    basket,
+                    last,
                     n,
                 )
             return False
+    _last_stroke_by_basket[basket] = n
     _last_stroke_count_emitted = n
     return True
 
@@ -337,23 +356,21 @@ def esp_reader_loop():
 
                 # Stroke validation: firmware sends bare stroke index (1, 2, 3, …) on its own line.
                 # Ignore 0 and non-integers (often TE field fragments); require monotonic accepted counts.
-                if is_stroke_validation_active() and re.fullmatch(r"[0-9]{1,6}", line):
-                    try:
-                        n = int(line, 10)
-                        if not _stroke_count_accept_for_sse(n):
-                            continue
-                        stroke_json = json.dumps({
-                            "type": "stroke_count",
-                            "count": n,
-                            "basket": get_stroke_validation_basket(),
-                        })
-                        dead = [q for q in list(sse_clients) if not _put_sse(q, stroke_json)]
-                        for q in dead:
-                            if q in sse_clients:
-                                sse_clients.remove(q)
-                    except ValueError:
-                        pass
-                    continue
+                if is_stroke_validation_active():
+                    reading = _parse_stroke_reading(line)
+                    if reading is not None:
+                        basket_n, n = reading
+                        if _stroke_count_accept_for_sse(n, basket_n):
+                            stroke_json = json.dumps({
+                                "type": "stroke_count",
+                                "count": n,
+                                "basket": basket_n,
+                            })
+                            dead = [q for q in list(sse_clients) if not _put_sse(q, stroke_json)]
+                            for q in dead:
+                                if q in sse_clients:
+                                    sse_clients.remove(q)
+                        continue
 
                 # TE reply: update cache + SSE immediately, and queue for poller (TS handshake).
                 try:

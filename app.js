@@ -2277,7 +2277,7 @@ function syncStrokeDisplayToHardware() {
 /** Live ESP stroke count for the beaker currently under stroke validation. */
 function applyStrokeValidationCountFromHardware(n, basketFromEvent) {
   var v = typeof n === 'number' ? n : parseInt(n, 10);
-  if (!isFinite(v) || v < 1) return;
+  if (!isFinite(v) || v < 0) return;
   var scr = document.getElementById('screen-stroke-validation');
   if (!scr || !scr.classList.contains('active')) return;
   if (!window.validationInProgress) return;

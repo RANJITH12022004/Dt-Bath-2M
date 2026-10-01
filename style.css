@@ -702,9 +702,7 @@
     }
     
     /* Prevent recipe button from scaling/moving when clicked */
-    #dashboard-mode-btn:active,
-    .recipe-button-main:active {
-        transform: none !important;
+    #dashboard-mode-btn:active {
         box-shadow: 0 4px 12px rgba(0,0,0,.3) !important;
     }
     
@@ -994,13 +992,19 @@
     .dt-start-btn.is-ready { background: #10b981; border-color: #059669; }
 
     .recipe-button-main {
-        transform: translate(-40px, 50px);
-    }
-    
-    /* Prevent recipe button from moving when clicked */
-    #dashboard-mode-btn:active,
-    .recipe-button-main:active {
-        transform: translate(-40px, 50px) !important;
+        margin-top: 6px;
+        padding: 12px 32px 7px 32px;
+        border-radius: 50px;
+        background: #0891b2;
+        color: #fff;
+        font-weight: 700;
+        font-size: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        border: 4px solid #0e7490;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
     }
     
     /* Heater glow effects */

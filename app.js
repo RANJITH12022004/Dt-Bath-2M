@@ -1598,7 +1598,6 @@ function leaveRecipeForm() {
 }
 
 async function loadQuickTest() {
-  var basketId = window.quickTestBasketId === 2 ? 2 : 1;
   var nameEl = document.getElementById('recipe-name');
   var batchEl = document.getElementById('recipe-batch');
   var tempEl = document.getElementById('recipe-temp');
@@ -1621,6 +1620,13 @@ async function loadQuickTest() {
     if (typeof showModal === 'function') showModal('Please enter a valid temperature.');
     return;
   }
+  var mediaEl = document.getElementById('recipe-media');
+  var meshEl = document.getElementById('recipe-mesh');
+  var media = mediaEl && mediaEl.value ? mediaEl.value.trim() : '';
+  var mesh = meshEl && meshEl.value ? meshEl.value.trim() : '';
+  var choice = await showBeakerSelectionPopup(name);
+  if (choice === null) return;
+  var basketIds = choice === 'both' ? [1, 2] : [choice];
   var durationMinutes = null;
   if (modeVal === 'timer') {
     var durationStr = durationEl && durationEl.value ? durationEl.value.trim() : '';
@@ -1635,26 +1641,33 @@ async function loadQuickTest() {
       return;
     }
   }
-  basketProducts[basketId] = name;
-  basketBatches[basketId] = batch;
-  basketModes[basketId] = modeVal;
-  basketDurations[basketId] = durationMinutes;
-  setTemp[basketId] = tempNum;
-  configuredBeakers[basketId] = true;
+  basketIds.forEach(function (basketId) {
+    basketProducts[basketId] = name;
+    basketBatches[basketId] = batch;
+    basketModes[basketId] = modeVal;
+    basketDurations[basketId] = durationMinutes;
+    basketMedia[basketId] = media;
+    basketMesh[basketId] = mesh;
+    setTemp[basketId] = tempNum;
+    configuredBeakers[basketId] = true;
+    if (typeof selectMode === 'function') selectMode(basketId, modeVal);
+  });
   try {
     await safeSave('basketProducts', basketProducts);
     await safeSave('basketBatches', basketBatches);
     await safeSave('basketDurations', basketDurations);
     await safeSave('basketModes', basketModes);
     await safeSave('setTemp', setTemp);
+    await safeSave('basketMedia', basketMedia);
+    await safeSave('basketMesh', basketMesh);
     await safeSave('configuredBeakers', configuredBeakers);
   } catch (e) {}
-  if (typeof selectMode === 'function') selectMode(basketId, modeVal);
   if (typeof updateDashboardTempButton === 'function') updateDashboardTempButton();
   if (typeof updateDashboardProductNames === 'function') updateDashboardProductNames();
   if (typeof updateBasketStates === 'function') updateBasketStates();
   window.quickTestBasketId = null;
-  if (typeof showToast === 'function') showToast('Loaded to basket ' + basketId + '. Recipe was not saved.', 'success');
+  var where = choice === 'both' ? 'both baskets' : ('basket ' + choice);
+  if (typeof showToast === 'function') showToast('Loaded to ' + where + '. Recipe was not saved.', 'success');
   if (typeof navigateTo === 'function') navigateTo('dashboard');
 }
 window.loadQuickTest = loadQuickTest;
@@ -2768,6 +2781,7 @@ function enableRecipeTimeTyping() {
     if (scrollableParent) {
       scrollableParent.classList.add('no-input-scroll');
     }
+    if (scrollableParent) scrollableParent.classList.remove('no-input-scroll');
     recipeDurationInput.addEventListener('focus', function() {
       if (typeof openOSKForInput === 'function') {
         openOSKForInput(recipeDurationInput);
@@ -3372,6 +3386,8 @@ var calibrationTimer = null;
 var calibrationStartTime = null;
 var calibrationInterval = null;
 var basketProducts = {1: null, 2: null}; // Store product names per basket
+var basketMedia = {1: '', 2: ''};
+var basketMesh = {1: '', 2: ''};
 var basketBatches = {1: null, 2: null}; // Store batch numbers per basket
 var basketDurations = {1: null, 2: null}; // Store recipe duration per basket (in minutes)
 var calibrationOffsets = {1: 0, 2: 0}; // Per-basket temperature calibration offsets
@@ -4688,6 +4704,10 @@ function navigateTo(s) {
         if (tempEl && !quickBasket) tempEl.value = '';
         var durationEl = document.getElementById('recipe-duration');
         if (durationEl && !quickBasket) durationEl.value = '';
+        var mediaEl = document.getElementById('recipe-media');
+        if (mediaEl && !quickBasket) mediaEl.value = '';
+        var meshEl = document.getElementById('recipe-mesh');
+        if (meshEl && !quickBasket) meshEl.value = '';
         var modeInput = document.getElementById('recipe-mode-value');
         if (modeInput && !quickBasket) modeInput.value = '';
         if (!quickBasket && typeof clearRecipeModeSelection === 'function') clearRecipeModeSelection();
@@ -9762,6 +9782,12 @@ function editRecipe(index) {
   if (titleEl) titleEl.textContent = 'Edit Recipe';
   var nameEl = document.getElementById('recipe-name');
   if (nameEl) nameEl.value = r.name || '';
+  var batchEl = document.getElementById('recipe-batch');
+  if (batchEl) batchEl.value = r.batch || '';
+  var mediaEl = document.getElementById('recipe-media');
+  if (mediaEl) mediaEl.value = r.media || '';
+  var meshEl = document.getElementById('recipe-mesh');
+  if (meshEl) meshEl.value = r.mesh || '';
   var tempEl = document.getElementById('recipe-temp');
   if (tempEl) tempEl.value = r.temp || '';
   var durationEl = document.getElementById('recipe-duration');
@@ -9851,13 +9877,17 @@ function saveRecipe() {
   }
   
   var batchEl = document.getElementById('recipe-batch');
+  var mediaEl = document.getElementById('recipe-media');
+  var meshEl = document.getElementById('recipe-mesh');
   var batchVal = batchEl && batchEl.value ? batchEl.value.trim() : '';
   var recipe = {
     name: name,
     batch: batchVal,
     temp: tempStr,
     duration: durationMinutes,
-    mode: modeVal
+    mode: modeVal,
+    media: mediaEl && mediaEl.value ? mediaEl.value.trim() : '',
+    mesh: meshEl && meshEl.value ? meshEl.value.trim() : ''
   };
   
   if (editingRecipeId !== null && editingRecipeId >= 0) {
@@ -9971,7 +10001,11 @@ function selectRecipeMode(mode) {
   
   var durationContainer = document.getElementById('recipe-duration-container');
   if (durationContainer) {
-    durationContainer.style.display = (mode === 'timer') ? '' : 'none';
+    durationContainer.style.display = (mode === 'timer') ? 'block' : 'none';
+    if (mode === 'timer') {
+      var durationEl = document.getElementById('recipe-duration');
+      if (durationEl && !String(durationEl.value || '').trim()) durationEl.value = '30:00';
+    }
   }
   
   // Update icons
@@ -10425,16 +10459,19 @@ async function selectRecipeForExecution(index) {
     return;
   }
 
-  var targets = resolveRecipeLoadTargets();
-  var applyToBoth = targets.applyToBoth;
-  var beakerNum = targets.basketId;
-  console.log('[selectRecipeForExecution] Load targets from dashboard:', targets);
+  var choice = await showBeakerSelectionPopup(r.name || 'Recipe');
+  if (choice === null) return;
+  var applyToBoth = choice === 'both';
+  var beakerNum = applyToBoth ? 1 : choice;
+  console.log('[selectRecipeForExecution] Load choice:', choice);
 
   var productName = r.product || r.name || 'Unknown Product';
-  batchNumber = batchNumber || 'N/A';
+  batchNumber = batchNumber || r.batch || 'N/A';
   var temperature = parseFloat(r.temp) || 37.0;
-  var mode = r.mode || 'timer';
-  var duration = parseFloat(r.duration) || 30; // minutes
+  var mode = r.mode || 'manual';
+  var duration = (r.duration === 0 || r.duration) ? parseFloat(r.duration) : null;
+  var media = r.media || '';
+  var mesh = r.mesh || '';
   
   // Store product/batch/duration per basket
   if (applyToBoth) {
@@ -10444,12 +10481,20 @@ async function selectRecipeForExecution(index) {
     basketBatches[2] = batchNumber;
     basketDurations[1] = duration;
     basketDurations[2] = duration;
+    basketMedia[1] = media;
+    basketMedia[2] = media;
+    basketMesh[1] = mesh;
+    basketMesh[2] = mesh;
+    configuredBeakers[1] = true;
+    configuredBeakers[2] = true;
   } else {
     var basketId = beakerNum;
     
     basketProducts[basketId] = productName;
     basketBatches[basketId] = batchNumber;
     basketDurations[basketId] = duration;
+    basketMedia[basketId] = media;
+    basketMesh[basketId] = mesh;
     
     // Do NOT clear the other basket's recipe - allow both to have recipes
   }
@@ -10501,6 +10546,8 @@ async function selectRecipeForExecution(index) {
   await safeSave('basketProducts', basketProducts);
   await safeSave('basketBatches', basketBatches);
   await safeSave('basketDurations', basketDurations);
+  await safeSave('basketMedia', basketMedia);
+  await safeSave('basketMesh', basketMesh);
   await safeSave('basketModes', basketModes);
   await safeSave('setTemp', setTemp);
   await safeSave('configuredBeakers', configuredBeakers);

@@ -84,20 +84,32 @@ def is_calibration_in_progress() -> bool:
 # Stroke validation: pause background TE/TS polling so UART is free for START,VAL stroke counts
 _stroke_validation_lock = threading.Lock()
 _stroke_validation_active = False
+_stroke_validation_basket = 1
 # Filter false positives when UART splits TE/temp lines into bare integers.
 _last_stroke_count_emitted = -1
 _STROKE_COUNT_MAX = 400
 _STROKE_COUNT_MAX_JUMP = 64
 
 
-def set_stroke_validation_active(value: bool) -> None:
+def set_stroke_validation_active(value: bool, basket: int | None = None) -> None:
     """When True, temperature_polling_thread skips TE (and TS) until cleared."""
-    global _stroke_validation_active, _last_stroke_count_emitted
+    global _stroke_validation_active, _last_stroke_count_emitted, _stroke_validation_basket
     with _stroke_validation_lock:
         _stroke_validation_active = bool(value)
         _last_stroke_count_emitted = -1
+        if basket is not None:
+            _stroke_validation_basket = 2 if int(basket) == 2 else 1
     if _logger:
-        _logger.info("[STROKE VAL] TE/TS polling %s", "paused" if value else "resumed")
+        _logger.info(
+            "[STROKE VAL] TE/TS polling %s (basket=%s)",
+            "paused" if value else "resumed",
+            _stroke_validation_basket if value else "-",
+        )
+
+
+def get_stroke_validation_basket() -> int:
+    with _stroke_validation_lock:
+        return 2 if int(_stroke_validation_basket or 1) == 2 else 1
 
 
 def _stroke_count_accept_for_sse(n: int) -> bool:
@@ -330,7 +342,11 @@ def esp_reader_loop():
                         n = int(line, 10)
                         if not _stroke_count_accept_for_sse(n):
                             continue
-                        stroke_json = json.dumps({"type": "stroke_count", "count": n})
+                        stroke_json = json.dumps({
+                            "type": "stroke_count",
+                            "count": n,
+                            "basket": get_stroke_validation_basket(),
+                        })
                         dead = [q for q in list(sse_clients) if not _put_sse(q, stroke_json)]
                         for q in dead:
                             if q in sse_clients:

@@ -469,7 +469,7 @@ def api_start_b1():
     try:
         if data.get("strokeValidation") or data.get("stroke_val"):
             cmd = "START,VAL,1"
-            bridge_services.set_stroke_validation_active(True)
+            bridge_services.set_stroke_validation_active(True, 1)
             if not bridge_services.esp_write_line(cmd):
                 bridge_services.set_stroke_validation_active(False)
                 return jsonify({"success": False, "error": "E1001", "message": "Device communication failed"}), 500
@@ -491,7 +491,7 @@ def api_start_b2():
     try:
         if data.get("strokeValidation") or data.get("stroke_val"):
             cmd = "START,VAL,2"
-            bridge_services.set_stroke_validation_active(True)
+            bridge_services.set_stroke_validation_active(True, 2)
             if not bridge_services.esp_write_line(cmd):
                 bridge_services.set_stroke_validation_active(False)
                 return jsonify({"success": False, "error": "E1001", "message": "Device communication failed"}), 500
@@ -512,7 +512,8 @@ def api_stroke_validation_active():
     """Pause/resume background TE polling (stroke validation uses UART for stroke counts)."""
     data = request.get_json(force=True, silent=True) or {}
     try:
-        bridge_services.set_stroke_validation_active(bool(data.get("active")))
+        basket = data.get("basket")
+        bridge_services.set_stroke_validation_active(bool(data.get("active")), basket)
         return jsonify({"ok": True, "active": bool(data.get("active"))})
     except Exception as e:
         app.logger.exception("stroke-validation-active failed")

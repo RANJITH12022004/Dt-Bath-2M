@@ -1855,7 +1855,7 @@ function unifiedSharedHeaterStartClick() {
           if (data && data.type === 'stroke_count') {
             var sn = typeof data.count === 'number' ? data.count : parseInt(data.count, 10);
             if (typeof applyStrokeValidationCountFromHardware === 'function') {
-              applyStrokeValidationCountFromHardware(sn);
+              applyStrokeValidationCountFromHardware(sn, data.basket === 2 ? 2 : (data.basket === 1 ? 1 : undefined));
             }
             return;
           }
@@ -2248,7 +2248,8 @@ async function sendStopAll(context) {
 
 /** Pi bridge pauses background TE/TS polling while stroke validation owns the UART */
 function notifyStrokeValidationTePause(active) {
-  return postJson('/api/stroke-validation-active', { active: !!active }).catch(function(err) {
+  var basket = (typeof validationBeaker !== 'undefined' && validationBeaker !== null) ? validationBeaker : 1;
+  return postJson('/api/stroke-validation-active', { active: !!active, basket: basket }).catch(function(err) {
     console.warn('[StrokeValidation] TE pause API:', err);
   });
 }
@@ -2273,21 +2274,27 @@ function syncStrokeDisplayToHardware() {
   if (node) node.textContent = String(typeof strokeCount === 'number' ? strokeCount : 0);
 }
 
-/** During stroke validation, ESP sends cumulative integers over SSE (stroke_count) only to verify the motor is running. */
-function applyStrokeValidationCountFromHardware(n) {
+/** Live ESP stroke count for the beaker currently under stroke validation. */
+function applyStrokeValidationCountFromHardware(n, basketFromEvent) {
   var v = typeof n === 'number' ? n : parseInt(n, 10);
   if (!isFinite(v) || v < 1) return;
   var scr = document.getElementById('screen-stroke-validation');
   if (!scr || !scr.classList.contains('active')) return;
   if (!window.validationInProgress) return;
   if (v > 400) return;
+  var beaker = (typeof validationBeaker !== 'undefined' && validationBeaker !== null) ? validationBeaker : 1;
+  if (basketFromEvent === 1 || basketFromEvent === 2) {
+    if (basketFromEvent !== beaker) return;
+  }
   strokeHardwareEverReceived = true;
   strokeHardwareVerifyCount = v;
-  var beaker = (typeof validationBeaker !== 'undefined' && validationBeaker !== null) ? validationBeaker : 1;
+  strokeCount = v;
   lastStrokeReadingByBasket[beaker] = v;
   lastStrokeReading = v;
   if (beaker === 1) strokeCounts.s1 = v;
   else strokeCounts.s2 = v;
+  var node = document.getElementById('stroke-counter');
+  if (node) node.textContent = String(v);
 }
 
 async function sendStop1() {
@@ -3289,13 +3296,14 @@ var VALIDATION_DEVIATION_LIMIT = 2.0; // ±2.0°C for pass/fail
 /** Stroke validation: target 30/min ±1 (USD/Eur pharmacopeia-style band) */
 var STROKE_VAL_PASS_MIN = 29;
 var STROKE_VAL_PASS_MAX = 31;
-/** 60s run; UI count is simulated (~30/min). ESP stroke_count only verifies the motor is moving. */
+/** 60s run. The on-screen count is the live ESP stroke count, not a simulated clock. */
 var STROKE_VAL_DURATION_MS = 60 * 1000;
-var STROKE_VAL_SIM_TICK_MS = 2000; // 30 ticks in 60s → 30 simulated strokes/min
+var STROKE_VAL_SIM_TICK_MS = 2000;
 var STROKE_VAL_SIM_MAX = 30;
-/** If no ESP stroke_count yet when simulated count reaches these milestones → hardware fault */
+/** No ESP stroke_count by these elapsed times → hardware fault */
 var STROKE_VAL_HW_GATE_SIM_EARLY = 12;
 var STROKE_VAL_HW_GATE_SIM_LATE = 22;
+var STROKE_VAL_HW_GATE_EARLY_MS = STROKE_VAL_HW_GATE_SIM_EARLY * STROKE_VAL_SIM_TICK_MS;
 var STROKE_VAL_HW_ERR_MSG = 'No stroke feedback was received from the equipment (the motor may not be running). Restart the device and contact support.';
 var reportSaveInProgress = {1: false, 2: false};
 
@@ -8227,7 +8235,8 @@ function abortStrokeValidationHardwareFault() {
   }
   (async function() {
     try {
-      if (typeof sendStopAll === 'function') await sendStopAll('stroke-validation-hardware-fault');
+      var faultBeaker = (typeof validationBeaker !== 'undefined' && validationBeaker !== null) ? validationBeaker : 1;
+      if (typeof sendStopForBasket === 'function') await sendStopForBasket(faultBeaker);
       await notifyStrokeValidationTePause(false);
     } catch (e) {
       console.warn('[Stroke Validation] cleanup after HW fault:', e);
@@ -8287,10 +8296,9 @@ function startStrokeValidationReal() {
 
   stopStrokeDisplaySmoothing();
   console.log(
-    '[Stroke Validation] Simulated UI ~' + STROKE_VAL_SIM_MAX + '/60s; pass band ' +
+    '[Stroke Validation] Live ESP count; pass band ' +
       STROKE_VAL_PASS_MIN + '–' + STROKE_VAL_PASS_MAX +
-      '; ESP motor check at sim ' + STROKE_VAL_HW_GATE_SIM_EARLY + ' and ' + STROKE_VAL_HW_GATE_SIM_LATE +
-      '; START,VAL basket',
+      '; hardware fault if no count by ' + STROKE_VAL_HW_GATE_EARLY_MS + 'ms; START,VAL basket',
     beakerNum
   );
 
@@ -8324,25 +8332,10 @@ function startStrokeValidationReal() {
     if (!scr || !scr.classList.contains('active')) return;
 
     var elapsed = Date.now() - strokeValidationStartTime;
-    var simCount = Math.min(STROKE_VAL_SIM_MAX, Math.floor(elapsed / STROKE_VAL_SIM_TICK_MS));
-    if (simCount !== strokeSimulatedCount) {
-      strokeSimulatedCount = simCount;
-      strokeCount = simCount;
-      var strokeCounterEl = document.getElementById('stroke-counter');
-      if (strokeCounterEl) strokeCounterEl.textContent = String(simCount);
-      if (beakerNum === 1) strokeCounts.s1 = simCount;
-      else strokeCounts.s2 = simCount;
-    }
 
-    if (!strokeHardwareEverReceived) {
-      if (strokeSimulatedCount >= STROKE_VAL_HW_GATE_SIM_LATE) {
-        abortStrokeValidationHardwareFault();
-        return;
-      }
-      if (strokeSimulatedCount >= STROKE_VAL_HW_GATE_SIM_EARLY) {
-        abortStrokeValidationHardwareFault();
-        return;
-      }
+    if (!strokeHardwareEverReceived && elapsed >= STROKE_VAL_HW_GATE_EARLY_MS) {
+      abortStrokeValidationHardwareFault();
+      return;
     }
 
     if (elapsed < STROKE_VAL_DURATION_MS) return;
@@ -8366,9 +8359,9 @@ function startStrokeValidationReal() {
 
     (async function() {
       try {
-        console.log('[Stroke Validation] Sending STOP after validation window');
-        if (typeof sendStopAll === 'function') {
-          await sendStopAll('stroke-validation-complete');
+        console.log('[Stroke Validation] Sending STOP after validation window for basket', beakerNum);
+        if (typeof sendStopForBasket === 'function') {
+          await sendStopForBasket(beakerNum);
         }
         await notifyStrokeValidationTePause(false);
       } catch (e) {
@@ -8382,7 +8375,7 @@ function startStrokeValidationReal() {
     }
 
     stopStrokeDisplaySmoothing();
-    strokeCount = strokeSimulatedCount;
+    strokeCount = strokeHardwareVerifyCount;
     syncStrokeDisplayToHardware();
     var strokesPerMin = strokeCount;
 
@@ -8504,8 +8497,7 @@ async function completeValidation(type) {
   var capturedStrokeHardwareVerifyCount = typeof strokeHardwareVerifyCount === 'number' ? strokeHardwareVerifyCount : 0;
   /** True if UI/logic indicated HW fault or we crossed motor-check gates with no ESP cumulative count */
   var strokeReportHardwareFail = !!capturedStrokeHardwareFault ||
-    (!(Number(capturedStrokeHardwareVerifyCount) > 0) &&
-      finalStrokeCount >= STROKE_VAL_HW_GATE_SIM_EARLY);
+    !(Number(capturedStrokeHardwareVerifyCount) > 0);
 
   // FIX: Capture temp validation values BEFORE cleanup resets them
   var capturedTempValidationSetTemp = tempValidationSetTemp || 37.0;

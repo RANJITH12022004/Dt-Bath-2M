@@ -130,11 +130,11 @@
 
                 <!-- MODE BUTTON (Recipe Management) - Between baskets (because recipes need to be accessible) -->
                 <div id="dashboard-mode-wrapper" style="position:absolute;left:50%;top:62%;transform:translate(calc(-50% - 40px), calc(-50% + 50px));z-index:10;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:auto;">
-                    <button type="button" id="dashboard-mode-btn" class="recipe-button-main" onclick="showRecipeModeMenu()" style="margin-top:10px;transform:translateX(12px);">
+                    <button type="button" id="dashboard-mode-btn" class="recipe-button-main" onclick="showRecipeModeMenu()" style="margin-top:10px;transform:translateX(-8px);">
                         <i data-lucide="book-open" style="width:20px;height:20px;"></i>
                         <span>Recipe</span>
                     </button>
-                    <div id="dashboard-temp-btn" class="recipe-button-main" style="padding:8px 16px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);border:3px solid #fbbf24;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:translate(18px, 90px);min-width:200px;overflow:hidden;pointer-events:none;cursor:default;box-shadow:0 4px 15px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2);">
+                    <div id="dashboard-temp-btn" class="recipe-button-main" style="padding:8px 16px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);border:3px solid #fbbf24;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:translate(-2px, 90px);min-width:200px;overflow:hidden;pointer-events:none;cursor:default;box-shadow:0 4px 15px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2);">
                         <div style="font-size:11px;opacity:0.95;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:600;">Bath Temp</div>
                         <div style="font-size:22px;font-weight:700;display:flex;align-items:center;gap:6px;">
                             <i data-lucide="thermometer" style="width:18px;height:18px;"></i>
@@ -1425,6 +1425,30 @@
         <div class="flex gap-4">
             <button onclick="cancelRecipeTempPicker()" class="flex-1 px-6 py-4 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
             <button onclick="applyRecipeTempPicker()" class="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Apply</button>
+        </div>
+    </div>
+</div>
+
+<div id="quick-test-modal" class="modal" style="display:none;z-index:10002;align-items:center;justify-content:center;">
+    <div class="modal-content" style="max-width:560px;width:92%;">
+        <h2 id="quick-test-title" class="text-2xl font-bold text-white mb-4 text-center">Enter test details</h2>
+        <label class="text-white text-sm font-semibold">Product name</label>
+        <input id="quick-test-product" type="text" class="w-full mb-3 mt-1 px-4 py-3 rounded-xl bg-gray-700 text-white text-lg" onfocus="if(typeof openOSKForInput==='function') openOSKForInput(this)"/>
+        <label class="text-white text-sm font-semibold">Batch number</label>
+        <input id="quick-test-batch" type="text" class="w-full mb-3 mt-1 px-4 py-3 rounded-xl bg-gray-700 text-white text-lg" onfocus="if(typeof openOSKForInput==='function') openOSKForInput(this)"/>
+        <div class="flex gap-3 mb-3">
+            <label class="text-white flex items-center gap-2"><input id="quick-test-mode-manual" type="radio" name="quick-test-mode" checked/> Manual</label>
+            <label class="text-white flex items-center gap-2"><input id="quick-test-mode-timer" type="radio" name="quick-test-mode"/> Timer</label>
+        </div>
+        <label class="text-white text-sm font-semibold">Duration minutes (timer, optional)</label>
+        <input id="quick-test-duration" type="text" inputmode="decimal" class="w-full mb-3 mt-1 px-4 py-3 rounded-xl bg-gray-700 text-white text-lg" onfocus="if(typeof openOSKForInput==='function') openOSKForInput(this)"/>
+        <label class="text-white text-sm font-semibold">Media (optional)</label>
+        <input id="quick-test-media" type="text" class="w-full mb-3 mt-1 px-4 py-3 rounded-xl bg-gray-700 text-white text-lg" onfocus="if(typeof openOSKForInput==='function') openOSKForInput(this)"/>
+        <label class="text-white text-sm font-semibold">Mesh (optional)</label>
+        <input id="quick-test-mesh" type="text" class="w-full mb-4 mt-1 px-4 py-3 rounded-xl bg-gray-700 text-white text-lg" onfocus="if(typeof openOSKForInput==='function') openOSKForInput(this)"/>
+        <div class="flex gap-3">
+            <button type="button" id="quick-test-cancel" class="flex-1 px-4 py-3 bg-gray-600 text-white font-bold rounded-xl">Cancel</button>
+            <button type="button" id="quick-test-confirm" class="flex-1 px-4 py-3 bg-green-600 text-white font-bold rounded-xl">Start</button>
         </div>
     </div>
 </div>

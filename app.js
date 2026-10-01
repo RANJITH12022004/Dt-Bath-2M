@@ -1576,6 +1576,66 @@ function basketMotorRunning(basketId) {
   return !!(testRunning[basketId] || (timers[basketId] && timers[basketId].running));
 }
 
+function basketHasRunDetails(basketId) {
+  var name = basketProducts && basketProducts[basketId] ? String(basketProducts[basketId]).trim() : '';
+  var batch = basketBatches && basketBatches[basketId] ? String(basketBatches[basketId]).trim() : '';
+  return !!(name && batch);
+}
+
+function promptQuickTestDetails(basketId) {
+  if (basketHasRunDetails(basketId)) return Promise.resolve(true);
+  var modal = document.getElementById('quick-test-modal');
+  if (!modal) return Promise.resolve(true);
+  return new Promise(function (resolve) {
+    var title = document.getElementById('quick-test-title');
+    if (title) title.textContent = 'Basket ' + basketId + ' — enter test details';
+    var productEl = document.getElementById('quick-test-product');
+    var batchEl = document.getElementById('quick-test-batch');
+    var mediaEl = document.getElementById('quick-test-media');
+    var meshEl = document.getElementById('quick-test-mesh');
+    var durationEl = document.getElementById('quick-test-duration');
+    var modeTimer = document.getElementById('quick-test-mode-timer');
+    var modeManual = document.getElementById('quick-test-mode-manual');
+    if (productEl) productEl.value = '';
+    if (batchEl) batchEl.value = '';
+    if (mediaEl) mediaEl.value = '';
+    if (meshEl) meshEl.value = '';
+    if (durationEl) durationEl.value = '';
+    if (modeManual) modeManual.checked = true;
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+    function close(result) {
+      modal.style.display = 'none';
+      modal.classList.remove('active');
+      resolve(result);
+    }
+    document.getElementById('quick-test-cancel').onclick = function () { close(false); };
+    document.getElementById('quick-test-confirm').onclick = async function () {
+      var product = productEl ? productEl.value.trim() : '';
+      var batch = batchEl ? batchEl.value.trim() : '';
+      if (!product || !batch) {
+        if (typeof showToast === 'function') showToast('Product name and batch number are required.', 'error');
+        return;
+      }
+      var mode = (modeTimer && modeTimer.checked) ? 'timer' : 'manual';
+      var minutes = durationEl ? parseFloat(durationEl.value) : NaN;
+      basketProducts[basketId] = product;
+      basketBatches[basketId] = batch;
+      basketModes[basketId] = mode;
+      if (mode === 'timer' && !isNaN(minutes) && minutes > 0) basketDurations[basketId] = minutes;
+      if (mediaEl && mediaEl.value.trim()) window.basketMedia = window.basketMedia || {};
+      try {
+        await safeSave('basketProducts', basketProducts);
+        await safeSave('basketBatches', basketBatches);
+        await safeSave('basketModes', basketModes);
+        await safeSave('basketDurations', basketDurations);
+      } catch (e) {}
+      if (typeof updateModeButtonsUI === 'function') updateModeButtonsUI(basketId);
+      close(true);
+    };
+  });
+}
+
 function sharedBathHeldByOther(basketId) {
   var other = basketId === 1 ? 2 : 1;
   return basketMotorRunning(other) || !!(window.basketMotorArmed && window.basketMotorArmed[other]);
@@ -1637,11 +1697,14 @@ function dualMotorBasketClick(basketId) {
   }
 
   if (armed && (window.dashboardPreheatPhase === 'ready' || window.heaterReadyForManualStart)) {
-    if (typeof triggerTestStartPopup === 'function') {
-      triggerTestStartPopup(basketId, { skipConfirm: true }).catch(function (err) {
-        console.error('[DualMotor] motor start', basketId, err);
-      });
-    }
+    promptQuickTestDetails(basketId).then(function (ok) {
+      if (!ok) return;
+      if (typeof triggerTestStartPopup === 'function') {
+        triggerTestStartPopup(basketId, { skipConfirm: true }).catch(function (err) {
+          console.error('[DualMotor] motor start', basketId, err);
+        });
+      }
+    });
     return;
   }
 
@@ -13444,10 +13507,11 @@ async function saveReportRecord(report) {
 async function saveCompletedTestReport(basketId, options) {
   try {
     options = options || {};
-    var dualByConfig = !!(configuredBeakers[1] && configuredBeakers[2]);
-    var dualByPending = !!(window._dualReportPendingSnapshots &&
-      ((basketId === 1 && window._dualReportPendingSnapshots[2]) || (basketId === 2 && window._dualReportPendingSnapshots[1])));
-    var dualSession = !!options.forceDualSession || ((dualByConfig || dualByPending) && !options.forceSingleBasketReport);
+    var otherId = basketId === 1 ? 2 : 1;
+    var otherLive = !!(testRunning[otherId] || (timers[otherId] && timers[otherId].running));
+    var dualByPending = !!(window._dualReportPendingSnapshots && window._dualReportPendingSnapshots[otherId]);
+    // Both baskets being configured is not a dual test. Only wait to merge when the other basket is actually running.
+    var dualSession = !!options.forceDualSession || ((otherLive || dualByPending) && !options.forceSingleBasketReport);
 
     if (!window._dualReportPendingSnapshots) {
       window._dualReportPendingSnapshots = { 1: null, 2: null };

@@ -14,8 +14,32 @@ import re
 import threading
 import time
 from contextlib import contextmanager
+from datetime import datetime
 
 import serial
+
+_UART_CAPTURE_FLAG = "/home/rle/uart-capture.on"
+_UART_CAPTURE_LOG = "/home/rle/uart-motor1-validation.txt"
+_uart_log_lock = threading.Lock()
+
+
+def _uart_trace(direction: str, text: str) -> None:
+    """Append one ESP line when /home/rle/uart-capture.on exists."""
+    try:
+        if not os.path.exists(_UART_CAPTURE_FLAG):
+            return
+    except OSError:
+        return
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    line = f"{stamp} {direction} {text}\n"
+    try:
+        with _uart_log_lock:
+            with open(_UART_CAPTURE_LOG, "a", encoding="utf-8") as f:
+                f.write(line)
+                f.flush()
+    except OSError:
+        pass
+
 
 # Module-level state (set in init)
 _logger = None
@@ -274,6 +298,7 @@ def esp_write_line(cmd: str, timeout=1.0, max_retries=3) -> bool:
                 esp_ser.write(line)
                 esp_ser.flush()
                 sent = cmd.strip()
+                _uart_trace("TX", sent)
                 _logger.debug("[ESP WRITE] Sent: %r", sent)
                 return True
         except Exception as e:
@@ -339,6 +364,7 @@ def esp_reader_loop():
                 line = line.strip()
                 if not line:
                     continue
+                _uart_trace("RX", line)
                 _logger.debug("<<< RECEIVED FROM ESP32: %r", line)
                 has_printable = any(c.isprintable() for c in line)
                 if not has_printable and len(line) > 0:
@@ -354,8 +380,7 @@ def esp_reader_loop():
                             pass
                     continue
 
-                # Stroke validation: firmware sends bare stroke index (1, 2, 3, …) on its own line.
-                # Ignore 0 and non-integers (often TE field fragments); require monotonic accepted counts.
+                # Stroke validation replies are S1:30 / S2:12 (also S1=30). Bare integers are legacy.
                 if is_stroke_validation_active():
                     reading = _parse_stroke_reading(line)
                     if reading is not None:
@@ -927,6 +952,23 @@ def get_connection_status(get_last_temps_flag=False):
     if get_last_temps_flag:
         status["last_temps"] = get_last_temps_flag
     return status
+
+
+def wait_for_calibration_reply(timeout: float = 2.5) -> str | None:
+    """Wait for OK or FAIL. Skip temperature and stroke lines that arrive in between."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            line = line_q.get(timeout=0.15)
+        except queue.Empty:
+            continue
+        text = (line or "").strip()
+        upper = text.upper()
+        if upper.startswith("TE") or upper.startswith("T1") or upper.startswith("T2") or upper.startswith("S1") or upper.startswith("S2"):
+            continue
+        if upper == "OK" or upper.startswith("OK,") or upper == "FAIL" or upper.startswith("FAIL") or upper in ("ERR", "ERROR"):
+            return text
+    return None
 
 
 def drain_queue(max_lines=10):

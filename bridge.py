@@ -536,13 +536,64 @@ def api_start_b3():
         return jsonify({"success": False, "error": "E1001", "message": "Device communication failed"}), 500
 
 
-def _calibration_write(cmd):
-    """Send calibration command with temp polling paused to reduce serial contention."""
+def _calibration_exchange(cmd: str, timeout: float = 2.5):
+    """Send one CAL command and wait for OK or FAIL. Temperature polling stays paused until the reply."""
     bridge_services.set_calibration_in_progress(True)
     try:
-        bridge_services.esp_write_line(cmd)
+        if not bridge_services.esp_write_line(cmd):
+            return False, "write failed"
+        reply = bridge_services.wait_for_calibration_reply(timeout)
+        if not reply:
+            return False, "no reply"
+        if reply.strip().upper().startswith("OK"):
+            return True, reply.strip()
+        return False, reply.strip()
     finally:
         bridge_services.set_calibration_in_progress(False)
+
+
+def _calibration_write(cmd):
+    """Send calibration command with temp polling paused until the firmware answers."""
+    ok, reply = _calibration_exchange(cmd)
+    if not ok:
+        raise RuntimeError(reply or "calibration failed")
+
+
+@app.route("/api/calibrate-bath", methods=["POST"])
+def api_calibrate_bath():
+    """Shared bath: CAL,IR then CAL,EXT1 then CAL,EXT2 at one reference temperature."""
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        temp = float(data.get("temp"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Enter a valid measured temperature"}), 400
+    if temp < 0 or temp > 100:
+        return jsonify({"ok": False, "error": "Measured temperature must be between 0 and 100°C"}), 400
+    channels = []
+    bridge_services.set_calibration_in_progress(True)
+    try:
+        for sensor in ("IR", "EXT1", "EXT2"):
+            cmd = f"CAL,{sensor},{temp:.1f}"
+            if not bridge_services.esp_write_line(cmd):
+                return jsonify({
+                    "ok": False,
+                    "error": f"{sensor} calibration failed: write failed",
+                    "failedSensor": sensor,
+                    "channels": channels,
+                })
+            reply = bridge_services.wait_for_calibration_reply(2.5)
+            channels.append({"sensor": sensor, "cmd": cmd, "reply": reply})
+            if not reply or not reply.strip().upper().startswith("OK"):
+                return jsonify({
+                    "ok": False,
+                    "error": f"{sensor} calibration failed: {reply or 'no reply from controller'}",
+                    "failedSensor": sensor,
+                    "channels": channels,
+                })
+            time.sleep(0.4)
+    finally:
+        bridge_services.set_calibration_in_progress(False)
+    return jsonify({"ok": True, "cmd": f"CAL,IR,{temp:.1f}", "channels": channels, "temp": temp})
 
 
 @app.route("/api/cal-ir1", methods=["POST"])

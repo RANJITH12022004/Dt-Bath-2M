@@ -8953,28 +8953,26 @@ async function performCalibration() {
       return new Promise(function(resolve) { setTimeout(resolve, 1000); });
     };
     
+    var calOk = false;
+    var calError = '';
     try {
-      console.log('[Calibration] Bath calibration: IR1 → EXT1 → EXT2 with same reference', measuredTrue);
-      var irResult = await sendCalIR1(measuredTrue, true);
-      console.log('[Calibration] IR1 result:', irResult && irResult.ok ? 'OK' : (irResult && irResult.error) || irResult);
-      await delay1s();
-      var ext1Result = await sendCalEXT1(measuredTrue, true);
-      console.log('[Calibration] EXT1 result:', ext1Result && ext1Result.ok ? 'OK' : (ext1Result && ext1Result.error) || ext1Result);
-      await delay1s();
-      var ext2Result = await sendCalEXT2(measuredTrue, true);
-      console.log('[Calibration] EXT2 result:', ext2Result && ext2Result.ok ? 'OK' : (ext2Result && ext2Result.error) || ext2Result);
-      
-      [irResult, ext1Result, ext2Result].forEach(function(r, i) {
-        var label = ['IR1', 'EXT1', 'EXT2'][i];
-        if (r && r.error && typeof showToast === 'function') {
-          showToast(label + ' calibration warning: ' + r.error, 'warning');
-        }
-      });
+      console.log('[Calibration] Shared bath CAL,IR then CAL,EXT1 then CAL,EXT2 at', measuredTrue);
+      var calResult = await postJson('/api/calibrate-bath', { temp: measuredTrue }, { skipInitCheck: true });
+      console.log('[Calibration] result:', calResult);
+      if (calResult && calResult.ok) {
+        calOk = true;
+      } else {
+        calError = (calResult && (calResult.error || calResult.message)) || 'Controller did not accept calibration';
+      }
     } catch (e) {
       console.error('[Calibration] Failed to send to ESP32:', e);
-      if (typeof showToast === 'function') {
-        showToast('Calibration saved locally but failed to send to ESP32: ' + String(e), 'warning');
+      calError = String(e);
+    }
+    if (!calOk) {
+      if (typeof showModal === 'function') {
+        showModal('Calibration failed: ' + calError);
       }
+      return;
     }
     
     var deviation = Math.abs(measuredTrue - ir1Reading);

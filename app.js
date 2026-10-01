@@ -2288,13 +2288,19 @@ function applyStrokeValidationCountFromHardware(n, basketFromEvent) {
   }
   strokeHardwareEverReceived = true;
   strokeHardwareVerifyCount = v;
-  strokeCount = v;
+  var shown = v;
+  if (typeof strokeValidationBaseline === 'number') {
+    shown = Math.max(0, v - strokeValidationBaseline);
+  } else {
+    shown = 0;
+  }
+  strokeCount = shown;
   lastStrokeReadingByBasket[beaker] = v;
   lastStrokeReading = v;
-  if (beaker === 1) strokeCounts.s1 = v;
-  else strokeCounts.s2 = v;
+  if (beaker === 1) strokeCounts.s1 = shown;
+  else strokeCounts.s2 = shown;
   var node = document.getElementById('stroke-counter');
-  if (node) node.textContent = String(v);
+  if (node) node.textContent = String(shown);
 }
 
 async function sendStop1() {
@@ -3296,6 +3302,8 @@ var VALIDATION_DEVIATION_LIMIT = 2.0; // ±2.0°C for pass/fail
 /** Stroke validation: target 30/min ±1 (USD/Eur pharmacopeia-style band) */
 var STROKE_VAL_PASS_MIN = 29;
 var STROKE_VAL_PASS_MAX = 31;
+/** Travel from park to the first stroke position before the 60s count starts. */
+var STROKE_VAL_PARK_DELAY_MS = 1500;
 /** 60s run. The on-screen count is the live ESP stroke count, not a simulated clock. */
 var STROKE_VAL_DURATION_MS = 60 * 1000;
 var STROKE_VAL_SIM_TICK_MS = 2000;
@@ -3310,7 +3318,8 @@ var reportSaveInProgress = {1: false, 2: false};
 // Stroke validation globals
 var strokeValidationInterval = null; // Interval for 60-second validation timer
 var strokeValidationEventSource = null; // Screen-specific EventSource for /api/stream
-var strokeValidationStartTime = null; // Start time for 60-second validation
+var strokeValidationStartTime = null; // Start time for 60-second validation (after park travel)
+var strokeValidationBaseline = null; // ESP stroke count when the measurement minute starts
 var lastStrokeReading = 0; // Last stroke count read from ESP32 (motor verify only during validation)
 var strokeValidationListener = null; // Event listener for hardware:data (if used)
 var validationCompletionInProgress = false; // Guard to prevent duplicate completeValidation calls
@@ -7963,6 +7972,10 @@ async function stopValidation() {
   console.log('[Validation] stopValidation');
 
   stopStrokeDisplaySmoothing();
+  if (window.strokeValidationParkTimer) {
+    clearTimeout(window.strokeValidationParkTimer);
+    window.strokeValidationParkTimer = null;
+  }
   
   // CHANGED: Clear testRunning and preheatInProgress flags
   if (testRunning) {
@@ -8292,7 +8305,12 @@ function startStrokeValidationReal() {
   strokeCount = 0;
   lastStrokeReadingByBasket[beakerNum] = 0;
   lastStrokeReading = 0;
-  strokeValidationStartTime = Date.now();
+  strokeValidationBaseline = null;
+  strokeValidationStartTime = 0;
+  if (window.strokeValidationParkTimer) {
+    clearTimeout(window.strokeValidationParkTimer);
+    window.strokeValidationParkTimer = null;
+  }
 
   stopStrokeDisplaySmoothing();
   console.log(
@@ -8315,7 +8333,17 @@ function startStrokeValidationReal() {
           showToast('Failed to start motor for stroke validation', 'error');
         }
       } else {
-        console.log('[Stroke Validation] START,VAL ok:', result);
+        console.log('[Stroke Validation] START,VAL ok:', result, 'timer starts in', STROKE_VAL_PARK_DELAY_MS, 'ms');
+        window.strokeValidationParkTimer = setTimeout(function() {
+          window.strokeValidationParkTimer = null;
+          if (strokeValidationHardwareAbortDone) return;
+          strokeValidationBaseline = (typeof strokeHardwareVerifyCount === 'number') ? strokeHardwareVerifyCount : 0;
+          strokeValidationStartTime = Date.now();
+          strokeCount = 0;
+          var node = document.getElementById('stroke-counter');
+          if (node) node.textContent = '0';
+          console.log('[Stroke Validation] Measurement timer started. Baseline S count', strokeValidationBaseline);
+        }, STROKE_VAL_PARK_DELAY_MS);
       }
     } catch (e) {
       console.error('[Stroke Validation] Exception sending START,VAL:', e);
@@ -8330,6 +8358,7 @@ function startStrokeValidationReal() {
     if (strokeValidationHardwareAbortDone) return;
     var scr = document.getElementById('screen-stroke-validation');
     if (!scr || !scr.classList.contains('active')) return;
+    if (!strokeValidationStartTime) return;
 
     var elapsed = Date.now() - strokeValidationStartTime;
 
@@ -8375,7 +8404,8 @@ function startStrokeValidationReal() {
     }
 
     stopStrokeDisplaySmoothing();
-    strokeCount = strokeHardwareVerifyCount;
+    var baseline = (typeof strokeValidationBaseline === 'number') ? strokeValidationBaseline : 0;
+    strokeCount = Math.max(0, (strokeHardwareVerifyCount || 0) - baseline);
     syncStrokeDisplayToHardware();
     var strokesPerMin = strokeCount;
 

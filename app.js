@@ -1584,57 +1584,81 @@ function basketHasRunDetails(basketId) {
 
 function promptQuickTestDetails(basketId) {
   if (basketHasRunDetails(basketId)) return Promise.resolve(true);
-  var modal = document.getElementById('quick-test-modal');
-  if (!modal) return Promise.resolve(true);
-  return new Promise(function (resolve) {
-    var title = document.getElementById('quick-test-title');
-    if (title) title.textContent = 'Basket ' + basketId + ' — enter test details';
-    var productEl = document.getElementById('quick-test-product');
-    var batchEl = document.getElementById('quick-test-batch');
-    var mediaEl = document.getElementById('quick-test-media');
-    var meshEl = document.getElementById('quick-test-mesh');
-    var durationEl = document.getElementById('quick-test-duration');
-    var modeTimer = document.getElementById('quick-test-mode-timer');
-    var modeManual = document.getElementById('quick-test-mode-manual');
-    if (productEl) productEl.value = '';
-    if (batchEl) batchEl.value = '';
-    if (mediaEl) mediaEl.value = '';
-    if (meshEl) meshEl.value = '';
-    if (durationEl) durationEl.value = '';
-    if (modeManual) modeManual.checked = true;
-    modal.style.display = 'flex';
-    modal.classList.add('active');
-    function close(result) {
-      modal.style.display = 'none';
-      modal.classList.remove('active');
-      resolve(result);
-    }
-    document.getElementById('quick-test-cancel').onclick = function () { close(false); };
-    document.getElementById('quick-test-confirm').onclick = async function () {
-      var product = productEl ? productEl.value.trim() : '';
-      var batch = batchEl ? batchEl.value.trim() : '';
-      if (!product || !batch) {
-        if (typeof showToast === 'function') showToast('Product name and batch number are required.', 'error');
-        return;
-      }
-      var mode = (modeTimer && modeTimer.checked) ? 'timer' : 'manual';
-      var minutes = durationEl ? parseFloat(durationEl.value) : NaN;
-      basketProducts[basketId] = product;
-      basketBatches[basketId] = batch;
-      basketModes[basketId] = mode;
-      if (mode === 'timer' && !isNaN(minutes) && minutes > 0) basketDurations[basketId] = minutes;
-      if (mediaEl && mediaEl.value.trim()) window.basketMedia = window.basketMedia || {};
-      try {
-        await safeSave('basketProducts', basketProducts);
-        await safeSave('basketBatches', basketBatches);
-        await safeSave('basketModes', basketModes);
-        await safeSave('basketDurations', basketDurations);
-      } catch (e) {}
-      if (typeof updateModeButtonsUI === 'function') updateModeButtonsUI(basketId);
-      close(true);
-    };
-  });
+  window.quickTestBasketId = basketId;
+  editingRecipeId = null;
+  if (typeof navigateTo === 'function') navigateTo('create-recipe');
+  return Promise.resolve(false);
 }
+
+function leaveRecipeForm() {
+  var wasQuick = !!window.quickTestBasketId;
+  window.quickTestBasketId = null;
+  editingRecipeId = null;
+  if (typeof navigateTo === 'function') navigateTo(wasQuick ? 'dashboard' : 'recipe-list');
+}
+
+async function loadQuickTest() {
+  var basketId = window.quickTestBasketId === 2 ? 2 : 1;
+  var nameEl = document.getElementById('recipe-name');
+  var batchEl = document.getElementById('recipe-batch');
+  var tempEl = document.getElementById('recipe-temp');
+  var durationEl = document.getElementById('recipe-duration');
+  var modeInput = document.getElementById('recipe-mode-value');
+  var name = nameEl && nameEl.value ? nameEl.value.trim() : '';
+  var batch = batchEl && batchEl.value ? batchEl.value.trim() : '';
+  var modeVal = modeInput && modeInput.value ? modeInput.value.trim() : '';
+  var tempStr = tempEl && tempEl.value ? String(tempEl.value).trim() : '';
+  var tempNum = tempStr ? parseFloat(tempStr) : NaN;
+  if (!name || !batch) {
+    if (typeof showModal === 'function') showModal('Product name and batch number are required.');
+    return;
+  }
+  if (!modeVal) {
+    if (typeof showModal === 'function') showModal('Please select Manual or Timer.');
+    return;
+  }
+  if (!tempStr || isNaN(tempNum)) {
+    if (typeof showModal === 'function') showModal('Please enter a valid temperature.');
+    return;
+  }
+  var durationMinutes = null;
+  if (modeVal === 'timer') {
+    var durationStr = durationEl && durationEl.value ? durationEl.value.trim() : '';
+    var parts = durationStr.split(':');
+    if (parts.length !== 2) {
+      if (typeof showModal === 'function') showModal('Please enter a valid duration (MM:SS).');
+      return;
+    }
+    durationMinutes = (parseInt(parts[0], 10) || 0) + ((parseInt(parts[1], 10) || 0) / 60);
+    if (!durationMinutes) {
+      if (typeof showModal === 'function') showModal('Please enter a non-zero duration.');
+      return;
+    }
+  }
+  basketProducts[basketId] = name;
+  basketBatches[basketId] = batch;
+  basketModes[basketId] = modeVal;
+  basketDurations[basketId] = durationMinutes;
+  setTemp[basketId] = tempNum;
+  configuredBeakers[basketId] = true;
+  try {
+    await safeSave('basketProducts', basketProducts);
+    await safeSave('basketBatches', basketBatches);
+    await safeSave('basketDurations', basketDurations);
+    await safeSave('basketModes', basketModes);
+    await safeSave('setTemp', setTemp);
+    await safeSave('configuredBeakers', configuredBeakers);
+  } catch (e) {}
+  if (typeof selectMode === 'function') selectMode(basketId, modeVal);
+  if (typeof updateDashboardTempButton === 'function') updateDashboardTempButton();
+  if (typeof updateDashboardProductNames === 'function') updateDashboardProductNames();
+  if (typeof updateBasketStates === 'function') updateBasketStates();
+  window.quickTestBasketId = null;
+  if (typeof showToast === 'function') showToast('Loaded to basket ' + basketId + '. Recipe was not saved.', 'success');
+  if (typeof navigateTo === 'function') navigateTo('dashboard');
+}
+window.loadQuickTest = loadQuickTest;
+window.leaveRecipeForm = leaveRecipeForm;
 
 function sharedBathHeldByOther(basketId) {
   var other = basketId === 1 ? 2 : 1;
@@ -4650,19 +4674,26 @@ function navigateTo(s) {
     }
     // Initialize form when creating a NEW recipe (not editing) - leave temp, duration, mode blank
     setTimeout(function() {
+      var saveBtn = document.getElementById('btn-save-recipe');
+      var loadBtn = document.getElementById('btn-load-quick-test');
+      var quickBasket = window.quickTestBasketId;
       if (editingRecipeId === null) {
         var titleEl = document.getElementById('recipe-title');
-        if (titleEl) titleEl.textContent = 'Create Recipe';
+        if (titleEl) titleEl.textContent = quickBasket ? ('Quick Test — Basket ' + quickBasket) : 'Create Recipe';
         var nameEl = document.getElementById('recipe-name');
-        if (nameEl) nameEl.value = '';
+        if (nameEl && !quickBasket) nameEl.value = '';
+        var batchEl = document.getElementById('recipe-batch');
+        if (batchEl && !quickBasket) batchEl.value = '';
         var tempEl = document.getElementById('recipe-temp');
-        if (tempEl) tempEl.value = '';
+        if (tempEl && !quickBasket) tempEl.value = '';
         var durationEl = document.getElementById('recipe-duration');
-        if (durationEl) durationEl.value = '';
+        if (durationEl && !quickBasket) durationEl.value = '';
         var modeInput = document.getElementById('recipe-mode-value');
-        if (modeInput) modeInput.value = '';
-        if (typeof clearRecipeModeSelection === 'function') clearRecipeModeSelection();
+        if (modeInput && !quickBasket) modeInput.value = '';
+        if (!quickBasket && typeof clearRecipeModeSelection === 'function') clearRecipeModeSelection();
       }
+      if (saveBtn) saveBtn.style.display = quickBasket ? 'none' : 'flex';
+      if (loadBtn) loadBtn.style.display = quickBasket ? 'flex' : 'none';
     }, 200);
   }
   
@@ -9819,9 +9850,11 @@ function saveRecipe() {
     }
   }
   
+  var batchEl = document.getElementById('recipe-batch');
+  var batchVal = batchEl && batchEl.value ? batchEl.value.trim() : '';
   var recipe = {
     name: name,
-    batch: '',
+    batch: batchVal,
     temp: tempStr,
     duration: durationMinutes,
     mode: modeVal

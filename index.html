@@ -130,11 +130,11 @@
 
                 <!-- MODE BUTTON (Recipe Management) - Between baskets (because recipes need to be accessible) -->
                 <div id="dashboard-mode-wrapper" style="position:absolute;left:50%;top:62%;transform:translate(calc(-50% - 40px), calc(-50% + 50px));z-index:10;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:auto;">
-                    <button type="button" id="dashboard-mode-btn" class="recipe-button-main" onclick="showRecipeModeMenu()" style="margin-top:10px;transform:translateX(-8px);">
+                    <button type="button" id="dashboard-mode-btn" class="recipe-button-main" onclick="showRecipeModeMenu()" style="margin-top:10px;transform:translateX(-18px);">
                         <i data-lucide="book-open" style="width:20px;height:20px;"></i>
                         <span>Recipe</span>
                     </button>
-                    <div id="dashboard-temp-btn" class="recipe-button-main" style="padding:8px 16px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);border:3px solid #fbbf24;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:translate(-2px, 90px);min-width:200px;overflow:hidden;pointer-events:none;cursor:default;box-shadow:0 4px 15px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2);">
+                    <div id="dashboard-temp-btn" class="recipe-button-main" style="padding:8px 16px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);border:3px solid #fbbf24;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:translate(-12px, 90px);min-width:200px;overflow:hidden;pointer-events:none;cursor:default;box-shadow:0 4px 15px rgba(245,158,11,0.4), inset 0 1px 0 rgba(255,255,255,0.2);">
                         <div style="font-size:11px;opacity:0.95;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:600;">Bath Temp</div>
                         <div style="font-size:22px;font-weight:700;display:flex;align-items:center;gap:6px;">
                             <i data-lucide="thermometer" style="width:18px;height:18px;"></i>
@@ -1260,7 +1260,7 @@
 <div class="screen main-content" id="screen-create-recipe">
     <div class="header-bar">
         <div class="flex items-center gap-4">
-            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="editingRecipeId = null; navigateTo('recipe-list');">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="leaveRecipeForm()">
                 <i class="w-8 h-8" data-lucide="arrow-left"></i>
             </button>
             <h1 id="recipe-title">Create Recipe</h1>
@@ -1272,6 +1272,10 @@
             <div class="form-group">
                 <label>Recipe Name</label>
                 <input class="w-full" id="recipe-name" placeholder="e.g., Standard Dissolution" type="text" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+            </div>
+            <div class="form-group" id="recipe-batch-group">
+                <label>Batch Number</label>
+                <input class="w-full" id="recipe-batch" placeholder="e.g., B123" type="text" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
             </div>
             <div class="form-group">
                 <label class="block mb-4 text-xl font-bold">Mode</label>
@@ -1302,9 +1306,13 @@
                 </div>
             </div>
             <div class="flex gap-4 pt-4">
-                <button type="button" class="w-full action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex items-center justify-center gap-3 border-4 border-green-700" onclick="saveRecipe()">
+                <button type="button" id="btn-save-recipe" class="w-full action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex items-center justify-center gap-3 border-4 border-green-700" onclick="saveRecipe()">
                     <i class="w-8 h-8" data-lucide="save"></i>
                     <span>SAVE</span>
+                </button>
+                <button type="button" id="btn-load-quick-test" class="w-full action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex items-center justify-center gap-3 border-4 border-green-700" style="display:none;" onclick="loadQuickTest()">
+                    <i class="w-8 h-8" data-lucide="download"></i>
+                    <span>LOAD</span>
                 </button>
             </div>
         </div>

@@ -1,0 +1,42 @@
+<!-- On-Screen Keyboard Container -->
+<!-- This file is loaded into #keyboard-root by keyboard.js -->
+<div id="osk" class="keyboard" aria-hidden="true">
+    <div class="flex flex-col p-3 gap-2" id="osk-rows"></div>
+</div>
+
+<!-- Edit Date and Time Screen (Keyboard Module) -->
+<div class="keyboard-screen" id="keyboard-edit-datetime" style="display: none;">
+    <div class="keyboard-screen-header">
+        <div class="flex items-center gap-4">
+            <button class="keyboard-screen-back-btn" onclick="Keyboard.hideEditDateTime()">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1 class="keyboard-screen-title">Edit Date and Time</h1>
+        </div>
+        <p class="keyboard-screen-clock">00:00 | 28-10-2025</p>
+    </div>
+    <div class="keyboard-screen-content">
+        <div class="keyboard-datetime-editor">
+            <label class="keyboard-dt-label">Date</label>
+            <input
+                id="keyboard-edit-date"
+                type="date"
+                class="keyboard-dt-input"
+                ondblclick="openOSKForInput(this)"
+            />
+
+            <label class="keyboard-dt-label">Time</label>
+            <input
+                id="keyboard-edit-time"
+                type="time"
+                class="keyboard-dt-input"
+                ondblclick="openOSKForInput(this)"
+            />
+
+            <button class="keyboard-action-btn" onclick="Keyboard.applyDateTime()">
+                Apply Date &amp; Time
+            </button>
+        </div>
+    </div>
+</div>
+

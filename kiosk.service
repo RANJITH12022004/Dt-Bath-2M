@@ -1,0 +1,18 @@
+[Unit]
+Description=RAISE Lab Kiosk
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/opt/kiosk
+ExecStart=/usr/bin/python3 /opt/kiosk/bridge.py
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/kiosk_bridge.log
+StandardError=append:/var/log/kiosk_bridge.log
+
+[Install]
+WantedBy=multi-user.target
+

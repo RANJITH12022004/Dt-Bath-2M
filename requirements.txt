@@ -1,0 +1,23 @@
+# Python dependencies for bridge.py
+# Install with: pip install -r requirements.txt
+
+# Core dependencies (required)
+Flask>=2.0.0
+pyserial>=3.5
+
+# Image printing dependencies (optional but recommended)
+# Install Pillow for image processing
+Pillow>=9.0.0
+
+# Install pdf2image for PDF to PNG conversion
+# Note: pdf2image requires poppler-utils system package
+# On Debian/Ubuntu: sudo apt-get install poppler-utils
+# On macOS: brew install poppler
+pdf2image>=1.16.0
+
+# Optional: pycups for direct CUPS bindings (not required - we use 'lp' command)
+# pycups>=2.0.0
+
+# Optional: python-escpos for ESC/POS printing (not required - we implement raw ESC/POS)
+# python-escpos>=3.0.0
+

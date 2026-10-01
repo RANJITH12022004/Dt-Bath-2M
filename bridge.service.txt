@@ -1,0 +1,17 @@
+[Unit]
+Description=Raspberry Pi Kiosk Hardware Bridge (ESP32 + Printers + Storage)
+After=network.target local-fs.target
+Wants=local-fs.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/kiosk
+ExecStart=/usr/bin/python3 /opt/kiosk/bridge.py
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,385 @@
+<!-- Debug overlay (visible with ?debug=1 URL param) -->
+<div id="kiosk-debug" style="position:fixed;bottom:4px;right:4px;opacity:0.6;z-index:9999;display:none;background:rgba(0,0,0,0.7);color:#0f0;padding:4px 8px;border-radius:4px;font-size:11px;font-family:monospace;">
+    Bridge: <span id="kiosk-debug-status">disconnected</span>
+</div>
+
+<!-- Debug overlay (visible with ?debug=1 URL param) -->
+<div id="kiosk-debug" style="position:fixed;bottom:4px;right:4px;opacity:0.6;z-index:9999;display:none;background:rgba(0,0,0,0.7);color:#0f0;padding:4px 8px;border-radius:4px;font-size:11px;font-family:monospace;">
+    Bridge: <span id="kiosk-debug-status">disconnected</span>
+</div>
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <p id="modal-message" class="text-xl mb-8 text-center text-white"></p>
+        <div class="flex gap-6 justify-center">
+            <button onclick="confirmModal()" class="px-12 py-6 bg-green-600 hover:bg-green-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">OK</button>
+            <button onclick="hideModal()" class="px-12 py-6 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Temperature Picker Modal -->
+<div id="temp-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2 class="text-2xl font-bold text-white mb-6 text-center">Set Temperature - Basket <span id="temp-picker-basket">1</span></h2>
+        
+        <!-- Scrolling Temperature Selector -->
+        <div class="flex items-center justify-center gap-4 mb-8">
+            <!-- Whole Number Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Temperature</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="temp-wheel-whole" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+            
+            <!-- Decimal Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Decimal</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="temp-wheel-decimal" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Display Current Selection -->
+        <div class="text-center mb-6">
+            <div class="text-4xl font-bold text-white" id="temp-picker-display">37.0</div>
+            <div class="text-lg text-gray-300">°C</div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex gap-4">
+            <button onclick="cancelTempPicker()" class="flex-1 px-6 py-4 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
+            <button onclick="applyTempPicker()" class="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Recipe Temperature Picker Modal -->
+<div id="recipe-temp-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2 class="text-2xl font-bold text-white mb-6 text-center">Set Recipe Temperature</h2>
+        
+        <!-- Scrolling Temperature Selector -->
+        <div class="flex items-center justify-center gap-4 mb-8">
+            <!-- Whole Number Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Temperature</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="recipe-temp-wheel-whole" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+            
+            <!-- Decimal Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Decimal</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="recipe-temp-wheel-decimal" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Display Current Selection -->
+        <div class="text-center mb-6">
+            <div class="text-4xl font-bold text-white" id="recipe-temp-picker-display">37.0</div>
+            <div class="text-lg text-gray-300">°C</div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex gap-4">
+            <button onclick="cancelRecipeTempPicker()" class="flex-1 px-6 py-4 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
+            <button onclick="applyRecipeTempPicker()" class="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Validation Temperature Picker Modal -->
+<div id="validation-temp-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2 class="text-2xl font-bold text-white mb-6 text-center">Set Validation Temperature</h2>
+        
+        <!-- Scrolling Temperature Selector -->
+        <div class="flex items-center justify-center gap-4 mb-8">
+            <!-- Whole Number Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Temperature</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="validation-temp-wheel-whole" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+            
+            <!-- Decimal Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Decimal</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="validation-temp-wheel-decimal" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Display Current Selection -->
+        <div class="text-center mb-6">
+            <div class="text-4xl font-bold text-white" id="validation-temp-picker-display">37.0</div>
+            <div class="text-lg text-gray-300">°C</div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex gap-4">
+            <button onclick="cancelValidationTempPicker()" class="flex-1 px-6 py-4 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
+            <button onclick="applyValidationTempPicker()" class="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Calibration Temperature Picker Modal -->
+<div id="calibration-temp-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2 class="text-2xl font-bold text-white mb-6 text-center">Set Calibration Temperature</h2>
+        
+        <!-- Scrolling Temperature Selector -->
+        <div class="flex items-center justify-center gap-4 mb-8">
+            <!-- Whole Number Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Temperature</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="calibration-temp-wheel-whole" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+            
+            <!-- Decimal Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Decimal</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="calibration-temp-wheel-decimal" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Display Current Selection -->
+        <div class="text-center mb-6">
+            <div class="text-4xl font-bold text-white" id="calibration-temp-picker-display">37.0</div>
+            <div class="text-lg text-gray-300">°C</div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex gap-4">
+            <button onclick="cancelCalibrationTempPicker()" class="flex-1 px-6 py-4 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
+            <button onclick="applyCalibrationTempPicker()" class="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Measured Temperature Picker Modal -->
+<div id="measured-temp-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 500px;">
+        <h2 class="text-2xl font-bold text-white mb-6 text-center">Set Measured Temperature</h2>
+        
+        <!-- Scrolling Temperature Selector -->
+        <div class="flex items-center justify-center gap-4 mb-8">
+            <!-- Whole Number Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Temperature</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="measured-temp-wheel-whole" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+            
+            <!-- Decimal Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Decimal</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="measured-temp-wheel-decimal" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Display Current Selection -->
+        <div class="text-center mb-6">
+            <div class="text-4xl font-bold text-white" id="measured-temp-picker-display">37.0</div>
+            <div class="text-lg text-gray-300">°C</div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex gap-4">
+            <button onclick="cancelMeasuredTempPicker()" class="flex-1 px-6 py-4 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
+            <button onclick="applyMeasuredTempPicker()" class="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Recipe Duration Picker Modal -->
+<div id="recipe-duration-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 700px;">
+        <h2 class="text-2xl font-bold text-white mb-6 text-center">Set Recipe Duration</h2>
+        
+        <!-- Scrolling Duration Selector (MM:SS only) -->
+        <div class="flex items-center justify-center gap-4 mb-8">
+            <!-- Minutes Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Minutes</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="recipe-duration-wheel-minutes" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+            
+            <!-- Seconds Wheel -->
+            <div class="flex-1">
+                <div class="text-center mb-2">
+                    <label class="text-sm text-gray-300">Seconds</label>
+                </div>
+                <div class="temp-wheel-container" style="height: 200px; overflow: hidden; position: relative; background: #1f2937; border-radius: 12px; border: 2px solid #4b5563;">
+                    <div class="temp-wheel" id="recipe-duration-wheel-seconds" style="height: 100%; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    <div class="temp-wheel-selector" style="position: absolute; top: 50%; left: 0; right: 0; height: 60px; border-top: 2px solid #3b82f6; border-bottom: 2px solid #3b82f6; pointer-events: none; transform: translateY(-50%); background: rgba(59, 130, 246, 0.1);"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Display Current Selection -->
+        <div class="text-center mb-6">
+            <div class="text-4xl font-bold text-white" id="recipe-duration-picker-display">00:00</div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex gap-4">
+            <button onclick="cancelRecipeDurationPicker()" class="flex-1 px-6 py-4 bg-gray-600 hover:bg-gray-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Cancel</button>
+            <button onclick="applyRecipeDurationPicker()" class="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-xl text-white transition-all active:scale-95">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Date Picker Modal -->
+<div id="date-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 400px; padding: 20px;">
+        <h2 style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 16px; text-align: center;">Select Date</h2>
+        
+        <!-- Month/Year Navigation -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: rgba(30, 58, 138, 0.3); padding: 12px; border-radius: 8px;">
+            <button onclick="prevMonth()" style="background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">&lt;</button>
+            <div style="color: white; font-weight: bold; font-size: 16px;" id="calendar-month-year">January 2025</div>
+            <button onclick="nextMonth()" style="background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold;">&gt;</button>
+        </div>
+        
+        <!-- Calendar Grid -->
+        <div style="background: rgba(30, 58, 138, 0.2); border-radius: 8px; padding: 12px;">
+            <!-- Day Headers -->
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px;">
+                <div style="text-align: center; color: #9ca3af; font-size: 12px; font-weight: bold; padding: 4px;">Su</div>
+                <div style="text-align: center; color: #9ca3af; font-size: 12px; font-weight: bold; padding: 4px;">Mo</div>
+                <div style="text-align: center; color: #9ca3af; font-size: 12px; font-weight: bold; padding: 4px;">Tu</div>
+                <div style="text-align: center; color: #9ca3af; font-size: 12px; font-weight: bold; padding: 4px;">We</div>
+                <div style="text-align: center; color: #9ca3af; font-size: 12px; font-weight: bold; padding: 4px;">Th</div>
+                <div style="text-align: center; color: #9ca3af; font-size: 12px; font-weight: bold; padding: 4px;">Fr</div>
+                <div style="text-align: center; color: #9ca3af; font-size: 12px; font-weight: bold; padding: 4px;">Sa</div>
+            </div>
+            
+            <!-- Calendar Days -->
+            <div id="calendar-days" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+                <!-- Will be populated by JS -->
+            </div>
+        </div>
+        
+        <!-- Buttons -->
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+            <button onclick="cancelDatePicker()" style="flex: 1; padding: 12px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">Cancel</button>
+            <button onclick="applyDatePicker()" style="flex: 1; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">Apply</button>
+        </div>
+    </div>
+</div>
+
+<!-- Time Picker Modal -->
+<div id="time-picker-modal" class="modal" style="display: none; z-index: 10001;">
+    <div class="modal-content" style="max-width: 350px; padding: 20px;">
+        <h2 style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 16px; text-align: center;">Select Time</h2>
+        
+        <!-- Time Input Section -->
+        <div style="background: rgba(30, 58, 138, 0.2); border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+            <div style="display: flex; gap: 12px; justify-content: center; align-items: center;">
+                <!-- Hour Input -->
+                <div style="text-align: center;">
+                    <label style="display: block; color: #9ca3af; font-size: 12px; margin-bottom: 8px;">Hour</label>
+                    <input type="number" id="time-hour-input" min="0" max="23" value="0" 
+                        style="width: 70px; padding: 12px; font-size: 24px; font-weight: bold; text-align: center; background: rgba(30, 58, 138, 0.5); border: 2px solid #3b82f6; border-radius: 8px; color: white;">
+                </div>
+                
+                <div style="color: white; font-size: 32px; font-weight: bold; margin-top: 24px;">:</div>
+                
+                <!-- Minute Input -->
+                <div style="text-align: center;">
+                    <label style="display: block; color: #9ca3af; font-size: 12px; margin-bottom: 8px;">Minute</label>
+                    <input type="number" id="time-minute-input" min="0" max="59" value="0" 
+                        style="width: 70px; padding: 12px; font-size: 24px; font-weight: bold; text-align: center; background: rgba(30, 58, 138, 0.5); border: 2px solid #3b82f6; border-radius: 8px; color: white;">
+                </div>
+            </div>
+            
+            <!-- Quick Time Buttons -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px;">
+                <button onclick="setQuickTime(0, 0)" style="padding: 8px; background: rgba(59, 130, 246, 0.3); color: white; border: 1px solid #3b82f6; border-radius: 6px; font-size: 14px; cursor: pointer;">00:00</button>
+                <button onclick="setQuickTime(9, 0)" style="padding: 8px; background: rgba(59, 130, 246, 0.3); color: white; border: 1px solid #3b82f6; border-radius: 6px; font-size: 14px; cursor: pointer;">09:00</button>
+                <button onclick="setQuickTime(12, 0)" style="padding: 8px; background: rgba(59, 130, 246, 0.3); color: white; border: 1px solid #3b82f6; border-radius: 6px; font-size: 14px; cursor: pointer;">12:00</button>
+            </div>
+        </div>
+        
+        <!-- Buttons -->
+        <div style="display: flex; gap: 12px;">
+            <button onclick="cancelTimePicker()" style="flex: 1; padding: 12px; background: #6b7280; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">Cancel</button>
+            <button onclick="applyTimePicker()" style="flex: 1; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;">Apply</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,1284 @@
+<!-- Login Screen - Where users prove they're allowed to use this thing -->
+<div class="screen active" id="screen-login">
+    <div class="centered-content">
+        <!-- Make sure the logo file exists at ./assets/rle_logo.png (because broken images are embarrassing) -->
+        <img alt="RAISE Logo" style="width: 300px; height: auto;" src="./assets/rle_logo.png"/>
+        <h2 class="text-4xl font-bold mb-4">Welcome:</h2>
+        <input class="w-full max-w-md" placeholder="Enter User ID/ Employee ID:" type="text" id="login-uid" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+        <input class="w-full max-w-md" placeholder="Password:" type="password" id="login-pwd" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+        <button type="button" class="w-full max-w-md action-btn-large bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white flex items-center justify-center gap-3" id="login-btn">
+            <span>LOGIN</span>
+            <i class="w-8 h-8" data-lucide="arrow-right"></i>
+        </button>
+        <div class="text-center mt-4 space-y-2">
+            <!-- Shows factory settings model and company name (because branding matters, apparently) -->
+            <p class="text-2xl" id="login-model-display">Model: <span id="login-model-number">DT-2025</span> | S/N: <span id="login-serial-number">SN-0000</span></p>
+            <p class="text-2xl">Tablet Disintegration Tester</p>
+            <p class="text-xl text-gray-400">www.raiselabequip.com</p>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard - The main screen where all the action happens -->
+<div class="screen main-content" id="screen-dashboard">
+    <div class="fixed w-full h-full flex">
+        <main class="flex-1 ml-32 flex flex-col relative">
+            <!-- TOP BAR - Logo, product names, and time (because users need to know what's going on) -->
+            <div class="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-3 pointer-events-none" style="left: 0; right: 0;">
+                <!-- Make sure the logo file exists (seriously, check this before deploying) -->
+                <img src="./assets/rle_logo.png" alt="Logo" class="h-12 pointer-events-auto" id="logo-tap-counter" style="cursor: pointer;">
+                <div class="text-center flex-1">
+                    <div class="text-white font-bold" style="font-size:20px;transform:translateX(-65px);" id="dashboard-product-names">
+                    </div>
+                </div>
+                <div id="datetime" class="text-white font-bold" style="transform:translateX(-140px);"></div>
+            </div>
+
+            <!-- TIMER / MANUAL - Basket 1 (Left) - Choose between timer mode and manual mode -->
+            <div class="absolute flex gap-3" style="left:50%;top:70px;transform:translateX(calc(-50% - 290px));z-index:10;gap:147px;">
+                <button id="timer-btn-1" onclick="selectMode(1, 'timer')" style="width:140px;height:50px;padding:0;font-size:22px;font-weight:bold;border-radius:25px;border:4px solid #6b7280;background:#374151;color:#9ca3af;box-shadow:0 4px 12px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;">Timer</button>
+                <button id="manual-btn-1" onclick="selectMode(1, 'manual')" style="width:140px;height:50px;padding:0;font-size:22px;font-weight:bold;border-radius:25px;border:4px solid #6b7280;background:#374151;color:#9ca3af;box-shadow:0 4px 12px rgba(0,0,0,.3);margin-left:-20px;display:flex;align-items:center;justify-content:center;">Manual</button>
+            </div>
+
+            <!-- TIMER / MANUAL - Basket 2 (Right) - Same deal, but for the other basket -->
+            <div class="absolute flex gap-3" style="left:50%;top:70px;transform:translateX(calc(-50% + 157px));z-index:10;gap:147px;">
+                <button id="timer-btn-2" onclick="selectMode(2, 'timer')" style="width:140px;height:50px;padding:0;font-size:22px;font-weight:bold;border-radius:25px;border:4px solid #6b7280;background:#374151;color:#9ca3af;box-shadow:0 4px 12px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;">Timer</button>
+                <button id="manual-btn-2" onclick="selectMode(2, 'manual')" style="width:140px;height:50px;padding:0;font-size:22px;font-weight:bold;border-radius:25px;border:4px solid #6b7280;background:#374151;color:#9ca3af;box-shadow:0 4px 12px rgba(0,0,0,.3);margin-left:-20px;display:flex;align-items:center;justify-content:center;">Manual</button>
+            </div>
+
+
+
+            <!-- REMOVED: Global Mode button - using per-basket Timer/Manual buttons only (because per-basket control is better) -->
+
+            <!-- BASKETS - The main attraction, where tests actually happen -->
+            <div class="flex-1 flex items-center justify-center relative">
+                <!-- PROBE 1 - External temperature probe (because we need to know the room temp) -->
+                <div id="probe-1" class="absolute" style="left:30px;top:70%;transform:translateY(-50%);">
+                    <div class="probe-circle">
+                        <div class="text-white text-lg font-bold">--</div>
+                        <div class="probe-text font-bold">External</div>
+                    </div>
+                </div>
+
+                <!-- BASKET 1 - The first test basket (because we have two of them) -->
+                <div class="flex flex-col items-center" id="basket1-wrapper" style="position:absolute;left:70px;top:62%;transform:translateY(-50%);">
+                    <div class="text-center" style="margin-top:-80px;margin-bottom:5px;">
+                        <div class="text-gray-400 text-base mb-0.5 font-bold">Run Time</div>
+                        <div id="timer1" class="text-white text-2xl tracking-wider glow font-semibold">00:00:00</div>
+                    </div>
+                    <div class="basket-container" id="basket1-container" style="position: relative;" onclick="handleBasketTap(1, event)">
+                        <!-- Holes will be dynamically generated based on basketConfig (because we support different vessel configurations) -->
+                        <div class="center-temp" id="temp1">--</div>
+                    </div>
+                    <div class="text-white text-lg mt-3 font-bold">Basket 1</div>
+                    <div id="heater1" class="flex flex-col items-center gap-0 mt-2" style="pointer-events: none; opacity: 0.6;">
+                        <i data-lucide="flame" style="width:36px;height:36px;color:#6b7280;"></i>
+                        <span style="font-size:11px;color:#6b7280;margin-top:2px;font-weight:bold;">Heater Off</span>
+                    </div>
+                    <div id="dashboard-temp-basket1-section" class="dashboard-set-temp-status mt-1 flex flex-col items-center" style="padding:2px 10px 3px 10px;border-radius:10px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);border:2px solid #fbbf24;box-shadow:0 1px 6px rgba(245,158,11,0.3);min-width:92px;pointer-events:none;user-select:none;-webkit-user-select:none;line-height:1.1;">
+                        <div style="font-size:8px;color:white;opacity:0.95;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Set Temp</div>
+                        <div style="font-size:13px;font-weight:bold;color:white;display:flex;align-items:center;gap:3px;margin-top:1px;">
+                            <i data-lucide="thermometer" style="width:12px;height:12px;"></i>
+                            <span id="dashboard-temp-1">--</span>
+                        </div>
+                    </div>
+                    <button type="button" id="start1" style="margin-top:10px;padding:12px 28px;background:#10b981;color:white;font-weight:bold;font-size:16px;box-shadow:0 4px 12px rgba(0,0,0,.3);border:4px solid #6b7280;border-radius:9999px;">Preheat</button>
+                </div>
+
+                <!-- MODE BUTTON (Recipe Management) - Between baskets (because recipes need to be accessible) -->
+                <div class="flex flex-col items-center gap-2" id="dashboard-mode-wrapper" style="position:absolute;left:50%;top:62%;transform:translate(calc(-50% - 40px), calc(-50% + 50px));z-index:10;pointer-events:auto;">
+                    <button id="dashboard-mode-btn" onclick="showRecipeModeMenu()" class="recipe-button-main" style="margin-top:6px;padding:12px 32px 7px 32px;border-radius:50px;background:#0891b2;color:white;font-weight:bold;font-size:16px;box-shadow:0 4px 12px rgba(0,0,0,.3);border:4px solid #0e7490;display:flex;align-items:center;gap:8px;user-select:none;-webkit-user-select:none;position:relative;">
+                        <i data-lucide="book-open" style="width:20px;height:20px;"></i>
+                        <span>Recipe</span>
+                    </button>
+                </div>
+
+                <!-- BASKET 2 - The second test basket (because two is better than one) -->
+                <div class="flex flex-col items-center" id="basket2-wrapper" style="position:absolute;left:520px;top:62%;transform:translateY(-50%);">
+                    <div class="text-center" style="margin-top:-80px;margin-bottom:5px;">
+                        <div class="text-gray-400 text-base mb-0.5 font-bold">Run Time</div>
+                        <div id="timer2" class="text-white text-2xl tracking-wider glow font-semibold">00:00:00</div>
+                    </div>
+                    <div class="basket-container" id="basket2-container" style="position: relative;" onclick="handleBasketTap(2, event)">
+                        <!-- Holes will be dynamically generated based on basketConfig (same deal as basket 1) -->
+                        <div class="center-temp" id="temp2">--</div>
+                    </div>
+                    <div class="text-white text-lg mt-3 font-bold">Basket 2</div>
+                    <div id="heater2" class="flex flex-col items-center gap-0 mt-2" style="pointer-events: none; opacity: 0.6;">
+                        <i data-lucide="flame" style="width:36px;height:36px;color:#6b7280;"></i>
+                        <span style="font-size:11px;color:#6b7280;margin-top:2px;font-weight:bold;">Heater Off</span>
+                    </div>
+                    <div id="dashboard-temp-basket2-section" class="dashboard-set-temp-status mt-1 flex flex-col items-center" style="padding:2px 10px 3px 10px;border-radius:10px;background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);border:2px solid #fbbf24;box-shadow:0 1px 6px rgba(245,158,11,0.3);min-width:92px;pointer-events:none;user-select:none;-webkit-user-select:none;line-height:1.1;">
+                        <div style="font-size:8px;color:white;opacity:0.95;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Set Temp</div>
+                        <div style="font-size:13px;font-weight:bold;color:white;display:flex;align-items:center;gap:3px;margin-top:1px;">
+                            <i data-lucide="thermometer" style="width:12px;height:12px;"></i>
+                            <span id="dashboard-temp-2">--</span>
+                        </div>
+                    </div>
+                    <button type="button" id="start2" style="margin-top:10px;padding:12px 28px;background:#10b981;color:white;font-weight:bold;font-size:16px;box-shadow:0 4px 12px rgba(0,0,0,.3);border:4px solid #6b7280;border-radius:9999px;">Preheat</button>
+                </div>
+
+                <!-- PROBE 2 - Second external temperature probe (because symmetry is nice) -->
+                <div id="probe-2" class="absolute" style="right:170px;top:70%;transform:translateY(-50%);z-index:5;">
+                    <div class="probe-circle">
+                        <div class="text-white text-lg font-bold">--</div>
+                        <div class="probe-text font-bold">External</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Report Preview Screen - Where users can see their reports before printing (because preview is important) -->
+<div class="screen main-content" id="screen-report-preview">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('reports')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Report Preview</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable" style="padding: 20px;">
+        <div class="report-preview-container" id="report-content">
+            <h1>RAISE LAB EQUIPMENT<br>Tablet Disintegration Tester</h1>
+            <h2><span id="report-client-company">Client Company Name</span></h2>
+
+            <p style="text-align: center; margin: 20px 0;"><strong id="report-title">TEST REPORT</strong></p>
+            
+            <!-- Report Header Fields from Factory Settings (Side by Side) -->
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <th style="width: 16.66%; padding: 4px 8px; text-align: left; border: 1px solid #ccc;">Model No</th>
+                    <td id="report-model-no" style="width: 16.66%; padding: 4px 8px; border: 1px solid #ccc;"></td>
+                    <th style="width: 16.66%; padding: 4px 8px; text-align: left; border: 1px solid #ccc;">Serial No</th>
+                    <td id="report-serial-no" style="width: 16.66%; padding: 4px 8px; border: 1px solid #ccc;"></td>
+                    <th style="width: 16.66%; padding: 4px 8px; text-align: left; border: 1px solid #ccc;">Location</th>
+                    <td id="report-location" style="width: 16.66%; padding: 4px 8px; border: 1px solid #ccc;"></td>
+                </tr>
+                <tr>
+                    <th style="padding: 4px 8px; text-align: left; border: 1px solid #ccc;">Instrument No</th>
+                    <td id="report-instrument-no" style="padding: 4px 8px; border: 1px solid #ccc;"></td>
+                    <th style="padding: 4px 8px; text-align: left; border: 1px solid #ccc;">Last Validation Date</th>
+                    <td id="report-last-validation" style="padding: 4px 8px; border: 1px solid #ccc;"></td>
+                    <th style="padding: 4px 8px; text-align: left; border: 1px solid #ccc;">Next Validation Due</th>
+                    <td id="report-next-validation" style="padding: 4px 8px; border: 1px solid #ccc;"></td>
+                </tr>
+            </table>
+            
+            <!-- Validation Report Specific Fields (hidden by default, shown for validation reports, because validation is different from regular tests) -->
+            <div id="validation-report-fields" style="display: none;">
+                <!-- Temperature Validation Report Fields -->
+                <div id="temp-validation-report-fields" style="display: none;">
+                    <table>
+                        <tr><th style="width: 30%;">Basket/Beaker</th><td id="report-basket-temp">Basket 1</td></tr>
+                        <tr><th>Validation Type</th><td id="report-validation-type-temp">Temperature</td></tr>
+                        <tr><th>Min Temperature</th><td id="report-temp-min">--°C</td></tr>
+                        <tr><th>Max Temperature</th><td id="report-temp-max">--°C</td></tr>
+                        <tr><th>Max Deviation</th><td id="report-deviation">--°C</td></tr>
+                        <tr><th>Status</th><td id="report-status-val-temp">PASSED</td></tr>
+                        <tr><th>Date & Time</th><td id="report-date-temp">28-10-2025 10:00</td></tr>
+                    </table>
+                </div>
+                
+                <!-- Stroke Validation Report Fields -->
+                <div id="stroke-validation-report-fields" style="display: none;">
+                    <table>
+                        <tr><th style="width: 30%;">Basket/Beaker</th><td id="report-basket-stroke">Basket 1</td></tr>
+                        <tr><th>Validation Type</th><td id="report-validation-type-stroke">Stroke</td></tr>
+                        <tr><th>Strokes Per Minute</th><td id="report-strokes-per-min">30</td></tr>
+                        <tr><th>Required Range</th><td id="report-stroke-range">29-31 strokes/min</td></tr>
+                        <tr><th>Status</th><td id="report-status-val-stroke">PASSED</td></tr>
+                        <tr><th>Date & Time</th><td id="report-date-stroke">28-10-2025 10:00</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div id="calibration-report-fields" style="display: none;">
+                <table>
+                    <tr><th style="width: 30%;">Bath</th><td id="report-cal-bath">Shared bath</td></tr>
+                    <tr><th>Sensor Reading</th><td id="report-cal-sensor">--°C</td></tr>
+                    <tr><th>Measured Temperature</th><td id="report-cal-measured">--°C</td></tr>
+                    <tr><th>Offset</th><td id="report-cal-offset">--°C</td></tr>
+                    <tr><th>Deviation</th><td id="report-cal-deviation">--°C</td></tr>
+                    <tr><th>Status</th><td id="report-cal-status">CALIBRATED</td></tr>
+                    <tr><th>Date & Time</th><td id="report-cal-date">--</td></tr>
+                </table>
+            </div>
+            
+            <!-- Test Report Fields (shown by default, because most reports are test reports) -->
+            <div id="test-report-fields">
+            <table>
+                <tr><th style="width: 30%;">Recipe Name (1)</th><td id="report-product1">Amoxicillin 20mg</td></tr>
+                <tr><th>Batch Number </th><td id="report-batch1">B:1354</td></tr>
+                <tr><th>Mode </th><td id="report-mode">Timer</td></tr>
+                <tr><th>Set Temperature </th><td id="report-temp">37.0°C</td></tr>
+                <tr id="report-set-duration-row-1"><th>Set Duration </th><td id="report-set-duration-1">00:30:00</td></tr>
+                <tr><th>Test Duration </th><td id="report-duration-1">00:30:00</td></tr>
+                <tr><th>Test Status </th><td id="report-status-1">Completed</td></tr>
+                <tr><th>Start Time </th><td id="report-start-1">15-10-2025 10:00 AM</td></tr>
+                <tr><th>End Time </th><td id="report-end-1">15-10-2025 10:30 AM</td></tr>
+            </table>
+
+                <table>
+                <tr><th>Recipe Name (2)</th><td id="report-product2">Paracetamol 500mg</td></tr>
+                <tr><th>Batch Number </th><td id="report-batch2">B:1765</td></tr>
+                <tr><th>Mode </th><td id="report-mode-2">Manual</td></tr>
+                <tr><th>Set Temperature </th><td id="report-temp-2">37.0°C</td></tr>
+                <tr id="report-set-duration-row-2"><th>Set Duration </th><td id="report-set-duration-2">00:30:00</td></tr>
+                <tr><th>Test Duration </th><td id="report-duration-2">00:30:00</td></tr>
+                <tr><th>Test Status </th><td id="report-status-2">Completed</td></tr>
+                <tr><th>Start Time </th><td id="report-start-2">15-10-2025 10:00 AM</td></tr>
+                <tr><th>End Time </th><td id="report-end-2">15-10-2025 10:30 AM</td></tr>
+            </table>
+            <!-- Vessel Completion Tables - Side by Side -->
+            <div class="flex gap-4" id="vessel-completion-wrapper" style="margin-top: 30px;">
+                <div class="flex-1">
+                    <h3 id="basket1-vessel-heading" style="font-size: 14pt;">Basket 1 TUBE COMPLETION STATUS</h3>
+                    <table id="basket1-vessel-table">
+                        <tr><th>Tube</th><th>Time (MM:SS)</th></tr>
+                        <tr><td>Tube 1</td><td id="vessel1-time">25:00</td></tr>
+                        <tr><td>Tube 2</td><td id="vessel2-time">28:00</td></tr>
+                        <tr><td>Tube 3</td><td id="vessel3-time">30:00</td></tr>
+                        <tr><td>Tube 4</td><td id="vessel4-time">27:00</td></tr>
+                        <tr><td>Tube 5</td><td id="vessel5-time">29:00</td></tr>
+                        <tr><td>Tube 6</td><td id="vessel6-time">26:00</td></tr>
+                    </table>
+                </div>
+                <div class="flex-1">
+                    <h3 id="basket2-vessel-heading" style="font-size: 14pt; margin-top: 0;">Basket 2 TUBE COMPLETION STATUS</h3>
+                    <table id="basket2-vessel-table" style="margin-top: 0;">
+                        <tr><th>Tube</th><th>Time (MM:SS)</th></tr>
+                        <tr><td>Tube 1</td><td id="vessel7-time">28:00</td></tr>
+                        <tr><td>Tube 2</td><td id="vessel8-time">30:00</td></tr>
+                        <tr><td>Tube 3</td><td id="vessel9-time">27:00</td></tr>
+                        <tr><td>Tube 4</td><td id="vessel10-time">29:00</td></tr>
+                        <tr><td>Tube 5</td><td id="vessel11-time">26:00</td></tr>
+                        <tr><td>Tube 6</td><td id="vessel12-time">28:00</td></tr>
+                    </table>
+                </div>
+            </div>
+            </div>
+            <div id="report-minmax-section" style="margin-top: 40px;">
+                <p><strong>Min/Max Temperature:</strong> <span id="report-minmax">36.5°C / 37.2°C</span></p>
+            </div>
+            <div class="signature-line">
+                <p><strong>Operator Name:</strong> <span id="report-operator-name">Operator Name</span></p>
+                <p><strong>Employee ID:</strong> <span id="report-operator-id">Employee ID</span></p>
+                <p><strong>Remarks:</strong> <span id="report-remarks"></span></p>
+                <div style="height: 40px; margin-top: 10px;"></div>
+            </div>
+            <div class="signature-line">
+                <p><strong>Approved By:</strong></p>
+                <div style="height: 40px; margin-top: 10px;"></div>
+            </div>
+        </div>
+        <div class="flex gap-4 w-full max-w-4xl mx-auto pb-8">
+            <button class="flex-1 action-btn-large bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white" onclick="handlePrintA4()">Print A4</button>
+            <button class="flex-1 action-btn-large bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white" onclick="handlePrintThermal()">Print Thermal</button>
+            <button class="flex-1 action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white" onclick="exportSingleReport(currentReportMeta ? currentReportMeta.id : null)">Export to USB</button>
+            <button class="flex-1 action-btn-large bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white" onclick="navigateTo('reports')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reports List Screen -->
+<div class="screen main-content" id="screen-reports">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('dashboard')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Reports</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable" style="padding: 20px;">
+        <div class="flex justify-center flex-wrap gap-4 mb-8">
+            <button class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white p-6 rounded-2xl text-xl font-bold flex flex-col items-center border-4 border-blue-700" style="width: 180px;" onclick="filterReports('test')">
+                <i class="w-16 h-16 mb-3" data-lucide="file-text"></i>
+                <span>Test Reports</span>
+            </button>
+            <button class="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white p-6 rounded-2xl text-xl font-bold flex flex-col items-center border-4 border-purple-700" style="width: 180px;" onclick="filterReports('validation')">
+                <i class="w-16 h-16 mb-3" data-lucide="check-circle"></i>
+                <span>Validation Reports</span>
+            </button>
+            <button class="bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white p-6 rounded-2xl text-xl font-bold flex flex-col items-center border-4 border-teal-700" style="width: 180px;" onclick="filterReports('calibration')">
+                <i class="w-16 h-16 mb-3" data-lucide="thermometer"></i>
+                <span>Calibration Reports</span>
+            </button>
+            <button class="bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white p-6 rounded-2xl text-xl font-bold flex flex-col items-center border-4 border-orange-700" style="width: 180px;" onclick="exportFilteredReports()">
+                <i class="w-16 h-16 mb-3" data-lucide="download"></i>
+                <span>Export Reports</span>
+            </button>
+        </div>
+        <table class="w-full max-w-5xl mx-auto">
+            <thead>
+                <tr>
+                    <th>SL No</th>
+                    <th>Report Name</th>
+                    <th>Creation Time</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="reports-table-body">
+                <tr>
+                    <td>1</td>
+                    <td>Test Report 001</td>
+                    <td>15-10-2025 04:00 PM</td>
+                    <td><button class="bg-blue-600 hover:bg-blue-700 text-white" onclick="openReportPreview(1)">Open Preview</button></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Test Trail 002</td>
+                    <td>14-10-2025 03:00 PM</td>
+                    <td><button class="bg-blue-600 hover:bg-blue-700 text-white" onclick="openReportPreview(2)">Open Preview</button></td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Validation Report 003</td>
+                    <td>13-10-2025 02:00 PM</td>
+                    <td><button class="bg-blue-600 hover:bg-blue-700 text-white" onclick="openReportPreview(3)">Open Preview</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Profile Screen -->
+<div class="screen main-content" id="screen-profile">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('dashboard')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Profile</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable" style="padding: 20px;">
+        <div class="max-w-2xl mx-auto space-y-6">
+            <div class="bg-gray-800 p-8 rounded-2xl border-4 border-gray-600">
+                <div class="flex items-center gap-6 mb-6">
+                    <i class="text-white" data-lucide="user" style="width: 60px; height: 60px;"></i>
+                    <div>
+                        <p class="text-2xl font-bold" id="profile-name">User Name</p>
+                        <p class="text-xl text-gray-300" id="profile-role">Role</p>
+                    </div>
+                </div>
+            </div>
+            <div class="w-full space-y-6">
+                <div class="form-group">
+                    <label>Edit Full Name</label>
+                    <input class="w-full" type="text" id="profile-edit-name" value="" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                </div>
+                <div class="form-group" id="profile-password-group">
+                    <label>Edit Password</label>
+                    <input class="w-full" type="password" id="profile-edit-pwd" value="" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                </div>
+                <button class="w-full action-btn-large bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white" onclick="saveProfile()">Save</button>
+            </div>
+            <div class="w-full grid grid-cols-1 gap-4 mt-8" id="profile-admin-buttons" style="display: none;">
+                <button class="action-btn-large bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white" onclick="navigateTo('manage-members')">Manage Members</button>
+                <button class="action-btn-large bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white" onclick="navigateTo('add-members')">Add Members</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Members Screen -->
+<div class="screen main-content" id="screen-manage-members">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('profile')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Manage Members</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable" style="padding: 20px; overflow-y: auto;">
+        <table class="w-full max-w-5xl mx-auto">
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="members-table-body">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Members Screen -->
+<div class="screen main-content" id="screen-add-members">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700 transition-all" onclick="navigateTo('profile')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1 class="text-2xl font-bold">Add New Member</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+
+    <div class="scrollable" style="padding: 20px;">
+        <div class="flex flex-col items-center justify-center min-h-full py-8">
+            <!-- Large Card Container -->
+            <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border-4 border-gray-600 shadow-2xl p-8 w-full max-w-4xl">
+
+
+                <!-- Form Grid Layout -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+                    <!-- Full Name -->
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xl font-bold text-white mb-3">Full Name</label>
+                        <input class="w-full h-20 bg-gray-700 border-4 border-gray-600 rounded-2xl text-2xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" type="text" id="add-member-name" placeholder="Enter full name" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                </div>
+
+                    <!-- User ID / Employee ID -->
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xl font-bold text-white mb-3">User ID / Employee ID</label>
+                        <input class="w-full h-20 bg-gray-700 border-4 border-gray-600 rounded-2xl text-2xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" type="text" id="add-member-username" placeholder="Enter User ID / Employee ID" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                </div>
+
+                    <!-- Password -->
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xl font-bold text-white mb-3">Password</label>
+                        <input class="w-full h-20 bg-gray-700 border-4 border-gray-600 rounded-2xl text-2xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" type="password" id="add-member-pwd" placeholder="Enter password" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                </div>
+
+                    <!-- Confirm Password -->
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xl font-bold text-white mb-3">Confirm Password</label>
+                        <input class="w-full h-20 bg-gray-700 border-4 border-gray-600 rounded-2xl text-2xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" type="password" id="add-member-confirm-pwd" placeholder="Confirm password" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                </div>
+
+                    <!-- Role Selection Buttons -->
+                    <div class="col-span-2">
+                        <label class="block text-xl font-bold text-white mb-3">Role</label>
+                        <input type="hidden" id="add-member-role" value="">
+                        <div class="flex gap-4">
+                            <button type="button" class="role-btn flex-1 h-20 bg-gray-700 border-4 border-gray-600 rounded-2xl text-2xl font-bold text-white hover:bg-gray-600 transition-all" data-role="User" onclick="selectRole('User')">
+                                User
+                            </button>
+                            <button type="button" class="role-btn flex-1 h-20 bg-gray-700 border-4 border-gray-600 rounded-2xl text-2xl font-bold text-white hover:bg-gray-600 transition-all" data-role="Supervisor" onclick="selectRole('Supervisor')">
+                                Supervisor
+                            </button>
+                            <button type="button" class="role-btn flex-1 h-20 bg-gray-700 border-4 border-gray-600 rounded-2xl text-2xl font-bold text-white hover:bg-gray-600 transition-all" data-role="Admin" onclick="selectRole('Admin')">
+                                Admin
+                            </button>
+                        </div>
+                </div>
+
+            </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-6">
+                    <button class="flex-1 h-24 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white text-2xl font-bold rounded-2xl border-4 border-gray-500 shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3" onclick="navigateTo('profile')">
+                        <i class="w-8 h-8" data-lucide="x"></i>
+                        Cancel
+                    </button>
+                    <button id="btn-add-member" class="flex-1 h-24 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white text-2xl font-bold rounded-2xl border-4 border-green-500 shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3" onclick="addMember()">
+                        <i class="w-8 h-8" data-lucide="user-plus"></i>
+                        ADD MEMBER
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Validate Screen -->
+<div class="screen main-content" id="screen-validate">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateBackFromStrokeBeakerSelect()">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Validate</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="centered-content">
+        <p class="text-3xl font-bold mb-8">Select Beaker to Validate</p>
+        <div class="flex justify-center gap-16">
+            <button class="bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" style="width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border-radius: 24px; font-size: 24px; font-weight: bold;" onclick="selectBeakerForValidation(1)">
+                <i class="text-blue-400" data-lucide="beaker" style="width: 120px; height: 120px;"></i>
+                <span class="text-2xl font-bold">Beaker 1</span>
+            </button>
+            <button class="bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" style="width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border-radius: 24px; font-size: 24px; font-weight: bold;" onclick="selectBeakerForValidation(2)">
+                <i class="text-blue-400" data-lucide="beaker" style="width: 120px; height: 120px;"></i>
+                <span class="text-2xl font-bold">Beaker 2</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- NEW: Main Selection Screen - VALIDATE vs CALIBRATE -->
+<div class="screen main-content" id="screen-validate-select">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('dashboard')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Validation & Calibration</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="centered-content" style="max-width: 700px; margin: 0 auto; padding: 20px; overflow: hidden;">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-white mb-2">Select Operation</h2>
+            <p class="text-base text-gray-300">Choose validation or calibration procedure</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- VALIDATE Button -->
+            <button class="bg-gradient-to-br from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 border-4 border-blue-400 rounded-2xl shadow-xl transition-all duration-300 flex flex-col items-center justify-center gap-3 p-6 active:scale-95" onclick="navigateToValidateFlow()" style="min-height: 180px;">
+                <div class="relative">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <i class="w-10 h-10 text-white" data-lucide="check-circle"></i>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold text-white mb-1">VALIDATE</h3>
+                    <p class="text-sm text-blue-200">Standard Apparatus Validation</p>
+                </div>
+            </button>
+            
+            <!-- CALIBRATE Button -->
+            <button class="bg-gradient-to-br from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 border-4 border-purple-400 rounded-2xl shadow-xl transition-all duration-300 flex flex-col items-center justify-center gap-3 p-6 active:scale-95" onclick="navigateToCalibration()" style="min-height: 180px;">
+                <div class="relative">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <i class="w-10 h-10 text-white" data-lucide="settings"></i>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold text-white mb-1">CALIBRATE</h3>
+                    <p class="text-sm text-purple-200">Calibration Procedure</p>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Validation Type Selection (renamed from validate-select) -->
+<div class="screen main-content" id="screen-validate-type-select">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('validate')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Validation Type</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="centered-content" style="max-width: 500px; margin: 0 auto; padding: 20px; overflow: hidden;">
+        <p class="text-lg font-bold mb-4 text-center">Beaker <span id="val-beaker-num" class="text-blue-400">1</span> Selected</p>
+        <div class="w-full space-y-3 mb-4">
+            <label class="validation-type-btn bg-gradient-to-r from-blue-600 to-blue-700 border-blue-800 cursor-pointer block" id="val-stroke" style="padding: 12px; font-size: 16px;">
+                <input class="hidden" name="val-type" type="radio" value="stroke" onchange="updateValidationSelection()"/>
+                <div class="flex items-center justify-center gap-2">
+                    <i class="w-5 h-5" data-lucide="arrow-up-down"></i>
+                    <span>Stroke Validation</span>
+                </div>
+            </label>
+            <label class="validation-type-btn bg-gradient-to-r from-orange-600 to-orange-700 border-orange-800 cursor-pointer block" id="val-temp" style="padding: 12px; font-size: 16px;">
+                <input class="hidden" name="val-type" type="radio" value="temp" onchange="updateValidationSelection()"/>
+                <div class="flex items-center justify-center gap-2">
+                    <i class="w-5 h-5" data-lucide="thermometer"></i>
+                    <span>Temperature Validation</span>
+                </div>
+            </label>
+        </div>
+        <button class="w-full bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex items-center justify-center gap-2 py-3 rounded-xl font-semibold" onclick="startValidationProcess()" style="font-size: 16px;">
+            <i class="w-5 h-5" data-lucide="play"></i>
+            <span>Start Validation</span>
+        </button>
+    </div>
+</div>
+
+<!-- Stroke Validation -->
+<div class="screen main-content" id="screen-stroke-validation">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-red-400 hover:text-red-300 p-3 rounded-full hover:bg-gray-700" onclick="stopValidation()">
+                <i class="w-8 h-8" data-lucide="square"></i>
+            </button>
+            <h1>Stroke Validation - Beaker <span id="stroke-beaker">1</span></h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="centered-content" style="max-width: 500px; margin: 0 auto; padding: 20px; overflow: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        <div class="text-center mb-4">
+            <p class="text-base text-gray-300 mb-2">Required: 29–31 strokes/min (30 ±1)</p>
+            <p class="text-4xl font-bold text-yellow-400 transition-all duration-150 ease-out" id="stroke-counter" style="font-variant-numeric: tabular-nums;">0</p>
+            <p class="text-lg mt-2">strokes/min</p>
+        </div>
+        <div id="stroke-validation-status-card" class="p-4 rounded-xl border-2 mb-4 w-full" style="display:none;">
+            <p id="stroke-validation-status-text" class="text-lg font-bold text-center text-white">VALIDATION PASSED</p>
+        </div>
+        <button id="stroke-complete-btn" class="w-full bg-gray-600 text-white flex items-center justify-center gap-2 py-3 rounded-xl font-semibold" onclick="completeValidation('stroke')" style="font-size: 16px; opacity: 0.5; cursor: not-allowed;" disabled>
+            <i class="w-5 h-5" data-lucide="check"></i>
+            <span>Complete & Save</span>
+        </button>
+    </div>
+</div>
+
+<!-- Temperature Validation -->
+<div class="screen main-content" id="screen-temp-validation">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button id="temp-validation-toggle-btn" class="text-green-400 hover:text-green-300 p-3 rounded-full hover:bg-gray-700" onclick="toggleTempValidation()">
+                <i class="w-8 h-8" data-lucide="play" id="temp-validation-toggle-icon"></i>
+            </button>
+            <h1>Temperature Validation – <span id="temp-beaker">Shared bath</span></h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="temp-validation-content" style="width: 100%; padding: 12px; overflow: hidden; display: flex; flex-direction: column; gap: 8px;">
+        <!-- Row 1: Set Temp input + Apply (compact inline) -->
+        <div id="temp-validation-set-temp-container" class="flex items-center gap-2" style="flex-wrap: wrap;">
+            <label class="text-xs font-bold text-gray-300 whitespace-nowrap">Set Temp (°C):</label>
+            <input type="text" id="temp-validation-set-temp-input" class="validation-temp-input bg-gray-700 border-2 border-gray-500 rounded-lg text-lg px-3 py-2 text-white text-center" value="37.0" inputmode="decimal" pattern="[0-9]+\.?[0-9]*" style="width: 80px;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+            <button onclick="applyValidationSetTemp()" class="bg-blue-600 hover:bg-blue-700 text-white py-[10.5px] px-4 rounded-lg font-semibold text-sm flex items-center gap-1">
+                <i class="w-4 h-4" data-lucide="check"></i> Apply
+            </button>
+        </div>
+        
+        <!-- Row 2: Set Temp | Measured | Deviation | Elapsed (4-col compact) -->
+        <div class="grid grid-cols-4 gap-2">
+            <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl border-2 border-blue-400 p-2 text-center">
+                <p class="text-xs font-bold text-blue-200">Set</p>
+                <p class="text-2xl font-bold text-white" id="set-temp-display">37.0</p>
+                <p class="text-xs text-blue-200">°C</p>
+            </div>
+            <div class="bg-gradient-to-br from-orange-600 to-orange-800 rounded-xl border-2 border-orange-400 p-2 text-center">
+                <p class="text-xs font-bold text-orange-200">Measured</p>
+                <p class="text-2xl font-bold text-white" id="measured-temp-display">0.0</p>
+                <p class="text-xs text-orange-200">°C</p>
+            </div>
+            <div class="bg-gray-800 rounded-xl border-2 border-gray-600 p-2 text-center">
+                <p class="text-xs font-bold text-gray-300">Max Deviation</p>
+                <p class="text-xl font-bold text-white" id="deviation-display">±0.0°C</p>
+            </div>
+            <div class="bg-gray-800 rounded-xl border-2 border-gray-600 p-2 text-center">
+                <p class="text-xs font-bold text-gray-300">Holding</p>
+                <p class="text-xl font-bold text-white" id="temp-validation-elapsed">02:00</p>
+            </div>
+        </div>
+
+        <!-- Row 3: Status message (compact) -->
+        <div id="validation-result-card" class="bg-gray-800 rounded-xl border-2 border-gray-600 p-2 text-center" style="display: block;">
+            <p class="text-sm font-bold" id="validation-message">Ready to Validate</p>
+            <p class="text-lg font-bold mt-0.5" id="validation-status">-</p>
+        </div>
+        
+        <div id="temp-validation-start-container" style="display: none;">
+            <button id="start-temp-validation-btn" onclick="startTemperatureValidation()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl font-bold text-base border-2 border-green-500 flex items-center justify-center gap-2">
+                <i class="w-5 h-5" data-lucide="play"></i> Start Temperature Validation
+            </button>
+        </div>
+        
+        <!-- Row 4: Action buttons (compact row) -->
+        <div class="flex flex-wrap gap-2">
+            <button id="validation-stop-btn" class="flex-1 min-w-[120px] bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl font-bold text-sm border-2 border-green-500 flex items-center justify-center gap-1" onclick="toggleTempValidation()">
+                <i class="w-4 h-4" data-lucide="play" id="validation-stop-btn-icon"></i>
+                <span id="validation-stop-btn-text">START</span>
+            </button>
+            <div id="temp-validation-buttons" class="flex gap-2 flex-1 min-w-[180px]" style="display: none;">
+                <button id="temp-validation-pass-btn" onclick="handleTempValidationPass()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl font-bold text-sm border-2 border-green-500 flex items-center justify-center gap-1">
+                    <i class="w-4 h-4" data-lucide="check-circle"></i> PASS
+                </button>
+                <button id="temp-validation-fail-btn" onclick="handleTempValidationFail()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl font-bold text-sm border-2 border-red-500 flex items-center justify-center gap-1">
+                    <i class="w-4 h-4" data-lucide="x-circle"></i> FAIL
+                </button>
+            </div>
+            <button id="calibrate-temp-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded-xl font-semibold text-sm border-2 border-yellow-500 flex items-center gap-1" onclick="calibrateTemperatureSensor()" style="display: none;">
+                <i class="w-4 h-4" data-lucide="settings"></i> CALIBRATE
+            </button>
+            <button id="complete-temp-validation-btn" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-xl font-semibold text-sm border-2 border-green-500 flex items-center gap-1" onclick="completeValidation('temp')" style="display: none;">
+                <i class="w-4 h-4" data-lucide="check"></i> Complete
+            </button>
+            <button id="btn-delete-calibration" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-xl font-semibold text-sm border-2 border-red-500 flex items-center gap-1" onclick="deleteCalibration()" style="display: none;">
+                <i class="w-4 h-4" data-lucide="trash-2"></i> Delete Cal
+            </button>
+            <button id="temp-validation-exit-btn" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-xl font-semibold text-sm border-2 border-gray-500 flex items-center justify-center gap-1" onclick="exitTempValidation()">
+                <i class="w-4 h-4" data-lucide="log-out"></i> Exit
+            </button>
+        </div>
+
+        <!-- Calibration Progress (hidden by default) -->
+        <div id="calibration-progress" class="bg-purple-600 p-2 rounded-xl border-2 border-purple-400 text-center" style="display: none;">
+            <div class="flex items-center justify-center gap-2">
+                <div class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                <p class="text-sm font-bold text-white">Calibrating...</p>
+            </div>
+            <p class="text-xs text-purple-200" id="calibration-progress-text">Please wait...</p>
+        </div>
+    </div>
+</div>
+
+<!-- NEW: Calibration Screen (old, keep for compatibility - now only temperature) -->
+<div class="screen main-content" id="screen-calibration" style="background: #000000; display: none;">
+    <!-- This screen is deprecated - calibration now uses screen-temp-calibration-input -->
+</div>
+
+<!-- Temperature Calibration Input Screen -->
+<div class="screen main-content" id="screen-temp-calibration-input" style="background: #000000;">
+    <div class="header-bar" style="background: rgba(0, 0, 0, 0.9);">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-gray-300 p-3 rounded-full hover:bg-gray-800" onclick="navigateTo('dashboard')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1 class="text-white">Bath temperature calibration</h1>
+        </div>
+        <p class="clock-display text-white">00:00 | 28-10-2025</p>
+    </div>
+    <div class="calibration-content" style="padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden;">
+        <div style="max-width: 700px; width: 100%; background: rgba(30, 30, 30, 0.9); border-radius: 20px; padding: 24px; border: 3px solid rgba(255, 255, 255, 0.1);">
+            
+            <div style="text-align: center; margin-bottom: 16px;">
+                <h2 style="font-size: 20px; font-weight: bold; color: white; margin-bottom: 4px;">Shared bath – IR1, EXT1, EXT2 and one reference reading</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                    <label style="display: block; color: white; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+                        <i data-lucide="monitor" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i>
+                        Internal (IR1)
+                    </label>
+                    <input
+                        type="text"
+                        id="calibration-internal-temp-input"
+                        readonly
+                        style="width: 100%; padding: 14px; font-size: 24px; font-weight: bold; text-align: center; background: rgba(55, 65, 81, 0.8); border: 3px solid #4b5563; border-radius: 12px; color: white; opacity: 0.9; cursor: not-allowed;"
+                        placeholder="Reading..."
+                    />
+                </div>
+                <div>
+                    <label style="display: block; color: white; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+                        <i data-lucide="thermometer-sun" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i>
+                        External 1 (EXT1)
+                    </label>
+                    <input
+                        type="text"
+                        id="calibration-external-temp-input"
+                        readonly
+                        style="width: 100%; padding: 14px; font-size: 24px; font-weight: bold; text-align: center; background: rgba(55, 65, 81, 0.8); border: 3px solid #4b5563; border-radius: 12px; color: white; opacity: 0.9; cursor: not-allowed;"
+                        placeholder="Reading..."
+                    />
+                </div>
+                <div>
+                    <label style="display: block; color: white; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+                        <i data-lucide="thermometer-sun" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i>
+                        External 2 (EXT2)
+                    </label>
+                    <input
+                        type="text"
+                        id="calibration-ext2-temp-input"
+                        readonly
+                        style="width: 100%; padding: 14px; font-size: 24px; font-weight: bold; text-align: center; background: rgba(55, 65, 81, 0.8); border: 3px solid #4b5563; border-radius: 12px; color: white; opacity: 0.9; cursor: not-allowed;"
+                        placeholder="Reading..."
+                    />
+                </div>
+                <div>
+                    <label style="display: block; color: white; font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+                        <i data-lucide="thermometer" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i>
+                        Reference (measured)
+                    </label>
+                    <input
+                        type="text"
+                        id="calibration-measured-temp-input"
+                        inputmode="decimal"
+                        pattern="[0-9]+\.?[0-9]*"
+                        style="width: 100%; padding: 14px; font-size: 24px; font-weight: bold; text-align: center; background: rgba(55, 65, 81, 0.8); border: 3px solid #10b981; border-radius: 12px; color: white;"
+                        placeholder="Enter measured temp"
+                        onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"
+                    />
+                </div>
+            </div>
+
+            <!-- Calibrate Button -->
+            <button 
+                onclick="performCalibration()" 
+                style="width: 100%; padding: 18px; font-size: 20px; font-weight: bold; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4); transition: all 0.3s;"
+                onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 12px 32px rgba(16, 185, 129, 0.5)';"
+                onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 8px 24px rgba(16, 185, 129, 0.4)';">
+                <i data-lucide="check-circle" style="width: 24px; height: 24px; display: inline-block; vertical-align: middle; margin-right: 10px;"></i>
+                Calibrate
+            </button>
+
+            <!-- Compact Info -->
+            <div style="margin-top: 12px; padding: 12px; background: rgba(59, 130, 246, 0.2); border-radius: 10px; border: 2px solid rgba(59, 130, 246, 0.4);">
+                <p style="color: #bfdbfe; font-size: 12px; line-height: 1.4; margin: 0;">
+                    <i data-lucide="info" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i>
+                    Place the reference thermometer appropriately in the shared bath, wait until IR1, EXT1, and EXT2 stabilize, then enter the reference reading once.
+                </p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Start Test Screen -->
+<!-- REMOVED: Conflicting global mode screen - using per-basket Timer/Manual buttons on dashboard only -->
+
+<!-- Settings Screen -->
+<div class="screen main-content" id="screen-settings">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('dashboard')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Device Settings</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable">
+        <div class="settings-grid">
+            <button class="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white settings-btn border-blue-700" onclick="navigateTo('add-beakers')">
+                <i class="text-blue-300" data-lucide="beaker"></i>
+                <span>Add Beakers</span>
+            </button>
+            <button class="bg-green-600 hover:bg-green-700 active:bg-green-800 text-white settings-btn border-green-700" onclick="navigateTo('add-baskets')">
+                <i class="text-green-300" data-lucide="test-tube"></i>
+                <span>Add Baskets</span>
+            </button>
+            <button id="settings-heater-btn" class="bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-gray-900 settings-btn border-yellow-600" onclick="navigateTo('heater-control')">
+                <i class="text-yellow-300" data-lucide="thermometer"></i>
+                <span>Heater ON/OFF</span>
+            </button>
+            <button id="settings-edit-datetime-btn" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white settings-btn border-indigo-700" onclick="navigateTo('edit-date-time')">
+                <i class="text-indigo-300" data-lucide="clock"></i>
+                <span>Edit Date and Time</span>
+            </button>
+            <button class="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white settings-btn border-red-700" onclick="logout()">
+                <i class="text-red-300" data-lucide="log-out"></i>
+                <span>Logout</span>
+            </button>
+            <button id="settings-factory-reset-btn" class="bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white settings-btn border-purple-700" onclick="handleFactoryReset()">
+                <i class="text-purple-300" data-lucide="rotate-ccw"></i>
+                <span>Factory Reset</span>
+            </button>
+            <button class="bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white settings-btn border-teal-700" onclick="navigateTo('recipe-list')">
+                <i class="text-teal-300" data-lucide="book-open"></i>
+                <span>Manage Recipe</span>
+            </button>
+            <button id="settings-factory-btn" class="bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white settings-btn border-gray-700" onclick="navigateTo('factory-settings')" style="display: none;">
+                <i class="text-gray-300" data-lucide="factory"></i>
+                <span>Factory Settings</span>
+            </button>
+            <button id="settings-factory-support-btn" type="button" class="bg-cyan-700 hover:bg-cyan-600 active:bg-cyan-800 text-white settings-btn border-cyan-900" onclick="navigateTo('factory-support')" style="display: none;">
+                <i class="text-cyan-200" data-lucide="headset"></i>
+                <span>Factory support</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Heater Control -->
+<div class="screen main-content" id="screen-heater-control">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button id="heater-back-btn" class="back-btn text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700 transition-all" onclick="navigateTo('settings')">
+                ← Back
+            </button>
+            <h1 class="text-2xl font-bold">Heater Control</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+
+    <div class="flex flex-col items-center justify-center min-h-full py-8 px-4">
+        <!-- Temperature Settings at Top -->
+        <div class="w-full max-w-4xl mb-8">
+            <div id="heater-control-grid" class="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
+                <div id="heater-control-basket-1" class="bg-gray-800 p-6 rounded-2xl border-4 border-gray-600">
+                    <h4 class="text-xl font-bold text-white mb-4 text-center">Bath temperature (shared)</h4>
+                    <div class="flex items-center justify-center gap-3 mb-4">
+                        <input type="text" id="set-temp-1" class="w-32 h-16 bg-gray-700 border-2 border-gray-600 rounded-xl text-xl px-4 text-white text-center" value="37.0" step="0.1" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        <span id="set-temp-1-text" class="hidden">37.0</span>
+                        <span class="text-2xl font-bold text-white">°C</span>
+                    </div>
+                    <button id="heater-control-btn-1" class="w-full h-16 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white text-xl font-bold rounded-xl border-4 border-green-500 shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 mb-3" onclick="toggleHeater(1)">
+                        <i class="w-6 h-6" data-lucide="power"></i>
+                        <span id="control-text-1">Start</span>
+                    </button>
+                </div>
+                <div id="heater-control-basket-2" class="hidden" aria-hidden="true">
+                    <input type="hidden" id="set-temp-2" value="37.0"/>
+                    <span id="set-temp-2-text" class="hidden">37.0</span>
+                    <button type="button" id="heater-control-btn-2" class="hidden"></button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Factory Settings Screen -->
+<div class="screen main-content" id="screen-factory-settings">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('settings')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1 class="text-2xl font-bold">Factory Settings</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable" style="padding: 20px;">
+        <div class="max-w-4xl mx-auto space-y-6">
+            <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border-4 border-gray-600 shadow-2xl p-8">
+                <!-- Form Grid Layout -->
+                <div class="space-y-6">
+                    <!-- Row 1: Company Name and Location (Required) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Company Name <span class="text-red-400">*</span></label>
+                            <input type="text" id="factory-company-name" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" placeholder="Enter company name" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Company Location <span class="text-red-400">*</span></label>
+                            <input type="text" id="factory-company-location" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" placeholder="City / Site" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Row 2: Serial Number and Model Number -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Serial Number</label>
+                            <input type="text" id="factory-serial-no" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" placeholder="Unique device serial" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Model Number</label>
+                            <input type="text" id="factory-model-no" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" placeholder="Product model" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Row 3: Instrument ID and Installation Date -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Instrument ID</label>
+                            <input type="text" id="factory-instrument-id" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" placeholder="Internal unique ID" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Installation Date</label>
+                            <input type="date" id="factory-installation-date" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white focus:border-blue-500 focus:outline-none transition-all" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Row 4: Firmware Version and Installed By -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Firmware Version</label>
+                            <input type="text" id="factory-firmware" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" placeholder="Auto-populated on update" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                        <div>
+                            <label class="block text-xl font-bold text-white mb-3">Installed By</label>
+                            <input type="text" id="factory-installed-by" class="w-full h-16 bg-gray-700 border-4 border-gray-600 rounded-2xl text-xl px-6 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none transition-all" placeholder="Technician name" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex gap-4 pt-6 border-t-4 border-gray-600 mt-6">
+                        <button class="flex-1 action-btn-large bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white" onclick="navigateTo('settings')">
+                            Cancel
+                        </button>
+                        <button id="btn-save-factory-settings" class="flex-1 action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white border-4 border-green-700" onclick="saveFactorySettings()" type="button">
+                            <i class="w-8 h-8" data-lucide="save"></i>
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Factory support -->
+<div class="screen main-content" id="screen-factory-support">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('settings')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Factory support</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable flex flex-col items-center justify-start pt-6 px-4 pb-8">
+        <div class="w-full max-w-xl">
+            <p class="factory-support-login-instructions text-white font-medium text-xl md:text-2xl leading-relaxed mb-7">
+                Connect this device to the LAN, then sign in using the factory support credentials.
+            </p>
+            <p id="factory-support-loading-msg" class="factory-support-loading-msg text-white text-lg mb-5" style="display: none;" aria-live="polite">
+                Please wait while this device prepares network information…
+            </p>
+            <div class="grid grid-cols-1 gap-4 factory-support-form-grid max-w-lg">
+                <div>
+                    <label class="block text-gray-300 mb-2 font-semibold">ID</label>
+                    <input type="text" id="factory-support-user" class="w-full bg-gray-700 border-2 border-gray-600 rounded-xl px-4 py-3 text-white text-lg" autocomplete="username" placeholder="ID" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-2 font-semibold">Password</label>
+                    <input type="password" id="factory-support-password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-xl px-4 py-3 text-white text-lg" autocomplete="current-password" placeholder="Password" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)">
+                </div>
+            </div>
+            <div class="flex gap-4 mt-6">
+                <button type="button" id="factory-support-btn-back" class="flex-1 action-btn-large bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white" onclick="navigateTo('settings')">Back</button>
+                <button type="button" id="factory-support-btn-submit" class="flex-1 action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white border-4 border-green-700" onclick="submitFactorySupportLogin()">Sign in</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Factory support: network result -->
+<div class="screen main-content" id="screen-factory-support-result">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('factory-support')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Factory support</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="factory-support-result-page scrollable flex flex-col items-center text-center px-5 py-8 max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-white mb-2 factory-support-result-title">Network address</h2>
+        <p class="factory-support-result-instructions text-white text-lg md:text-xl leading-relaxed mb-7 max-w-xl">
+            Use this address on the same LAN to reach this device.
+        </p>
+        <div id="factory-support-result-ip" class="factory-support-ip-hero"></div>
+        <div class="flex gap-4 mt-8 w-full max-w-xl">
+            <button type="button" class="flex-1 action-btn-large bg-gray-600 hover:bg-gray-700 text-white" onclick="navigateTo('factory-support')">Back</button>
+            <button type="button" class="flex-1 action-btn-large bg-green-600 hover:bg-green-700 text-white border-4 border-green-700" onclick="navigateTo('settings')">Done</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Add Beakers Screen -->
+<div class="screen main-content" id="screen-add-beakers">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('settings')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Add Beakers</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="centered-content">
+        <div class="flex justify-center gap-12 flex-wrap">
+            <button id="beaker-select-1" class="beaker-select-btn bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" style="width: 180px; height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: 24px; font-size: 22px; font-weight: bold;" onclick="selectBeaker(1)">
+                <i class="text-blue-400" data-lucide="beaker" style="width: 100px; height: 100px;"></i>
+                <span>Beaker 1</span>
+            </button>
+            <button id="beaker-select-2" class="beaker-select-btn bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" style="width: 180px; height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: 24px; font-size: 22px; font-weight: bold;" onclick="selectBeaker(2)">
+                <i class="text-blue-400" data-lucide="beaker" style="width: 100px; height: 100px;"></i>
+                <span>Beaker 2</span>
+            </button>
+            <button id="beaker-select-both" class="beaker-select-btn bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" style="width: 180px; height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; border-radius: 24px; font-size: 22px; font-weight: bold;" onclick="selectBeaker('both')">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <i class="text-blue-400" data-lucide="beaker" style="width: 50px; height: 50px;"></i>
+                    <i class="text-blue-400" data-lucide="beaker" style="width: 50px; height: 50px;"></i>
+                </div>
+                <span>Both</span>
+            </button>
+        </div>
+        
+        <button class="action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white mt-12" id="proceed-beaker-btn" style="display: none;" onclick="proceedWithBeakerSelection()">
+            <span>Proceed to Dashboard</span>
+        </button>
+    </div>
+</div>
+
+<!-- Add Baskets Screen -->
+<div class="screen main-content" id="screen-add-baskets">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('settings')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Add Baskets</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="centered-content">
+        <div class="flex justify-center gap-12">
+            <button class="flex flex-col items-center p-6 rounded-2xl bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" onclick="setBasketConfig(1)">
+                <svg style="width: 160px; height: 160px;" fill="none" viewbox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="48" cy="48" fill="#4B5563" r="40" stroke="#6B7280" stroke-width="4"></circle>
+                    <circle cx="48" cy="48" fill="#9CA3AF" r="12">
+                        <text fill="black" font-size="14" text-anchor="middle" x="48" y="54">1</text>
+                    </circle>
+                </svg>
+                <span class="mt-4 text-2xl font-bold text-white">1</span>
+            </button>
+            <button class="flex flex-col items-center p-6 rounded-2xl bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" onclick="setBasketConfig(3)">
+                <svg style="width: 160px; height: 160px;" fill="none" viewbox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="48" cy="48" fill="#4B5563" r="40" stroke="#6B7280" stroke-width="4"></circle>
+                    <circle cx="48" cy="34" fill="#9CA3AF" r="12"><text fill="black" font-size="14" text-anchor="middle" x="48" y="39">1</text></circle>
+                    <circle cx="34" cy="62" fill="#9CA3AF" r="12"><text fill="black" font-size="14" text-anchor="middle" x="34" y="67">2</text></circle>
+                    <circle cx="62" cy="62" fill="#9CA3AF" r="12"><text fill="black" font-size="14" text-anchor="middle" x="62" y="67">3</text></circle>
+                </svg>
+                <span class="mt-4 text-2xl font-bold text-white">3</span>
+            </button>
+            <button class="flex flex-col items-center p-6 rounded-2xl bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95" onclick="setBasketConfig(6)">
+                <svg style="width: 160px; height: 160px;" fill="none" viewbox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="48" cy="48" fill="#4B5563" r="40" stroke="#6B7280" stroke-width="4"></circle>
+                    <!-- 6 holes at clock positions: 12, 2, 4, 6, 8, 10 o'clock, moved inside from outer circle -->
+                    <!-- 12 o'clock (top) -->
+                    <circle cx="48" cy="20" fill="#9CA3AF" r="10"><text fill="black" font-size="12" text-anchor="middle" x="48" y="25">1</text></circle>
+                    <!-- 2 o'clock -->
+                    <circle cx="72.25" cy="34" fill="#9CA3AF" r="10"><text fill="black" font-size="12" text-anchor="middle" x="72.25" y="39">2</text></circle>
+                    <!-- 4 o'clock -->
+                    <circle cx="72.25" cy="62" fill="#9CA3AF" r="10"><text fill="black" font-size="12" text-anchor="middle" x="72.25" y="67">3</text></circle>
+                    <!-- 6 o'clock (bottom) -->
+                    <circle cx="48" cy="76" fill="#9CA3AF" r="10"><text fill="black" font-size="12" text-anchor="middle" x="48" y="81">4</text></circle>
+                    <!-- 8 o'clock -->
+                    <circle cx="23.75" cy="62" fill="#9CA3AF" r="10"><text fill="black" font-size="12" text-anchor="middle" x="23.75" y="67">5</text></circle>
+                    <!-- 10 o'clock -->
+                    <circle cx="23.75" cy="34" fill="#9CA3AF" r="10"><text fill="black" font-size="12" text-anchor="middle" x="23.75" y="39">6</text></circle>
+                </svg>
+                <span class="mt-4 text-2xl font-bold text-white">6</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Recipe List Screen -->
+<div class="screen main-content" id="screen-recipe-list">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('settings')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1>Manage Recipes</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable" style="padding: 20px;">
+        <div class="max-w-5xl mx-auto space-y-6">
+            <button id="btn-create-recipe" class="w-full action-btn-large bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white flex items-center justify-center gap-4 border-4 border-teal-700" onclick="editingRecipeId = null; navigateTo('create-recipe');">
+                <i class="w-10 h-10" data-lucide="plus"></i>
+                <span>Create New Recipe</span>
+            </button>
+            <div class="bg-gray-800 rounded-2xl p-6 border-4 border-gray-600" id="recipe-list-container">
+                <p class="text-center text-gray-400 py-8 text-xl">No recipes created yet.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create / Edit Recipe Screen -->
+<div class="screen main-content" id="screen-create-recipe">
+    <div class="header-bar">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="editingRecipeId = null; navigateTo('recipe-list');">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1 id="recipe-title">Create Recipe</h1>
+        </div>
+        <p class="clock-display">00:00 | 28-10-2025</p>
+    </div>
+    <div class="scrollable" style="padding: 20px;">
+        <div class="max-w-3xl mx-auto space-y-6">
+            <div class="form-group">
+                <label>Recipe Name</label>
+                <input class="w-full" id="recipe-name" placeholder="e.g., Standard Dissolution" type="text" dir="ltr" style="text-align: left;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+            </div>
+            <div class="form-group">
+                <label class="block mb-4 text-xl font-bold">Mode</label>
+                <div class="flex justify-center gap-6">
+                    <button type="button" id="recipe-mode-manual" class="recipe-mode-btn flex-1 bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95 text-white font-bold py-6 rounded-2xl transition-all duration-200 shadow-lg" onclick="selectRecipeMode('manual')" style="min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="w-12 h-12" data-lucide="hand"></i>
+                        <span class="text-2xl">Manual</span>
+                    </button>
+                    <button type="button" id="recipe-mode-timer" class="recipe-mode-btn flex-1 bg-gray-700 border-4 border-gray-600 hover:border-blue-500 active:scale-95 text-white font-bold py-6 rounded-2xl transition-all duration-200 shadow-lg" onclick="selectRecipeMode('timer')" style="min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="w-12 h-12" data-lucide="timer"></i>
+                        <span class="text-2xl">Timer</span>
+                    </button>
+                </div>
+                <input type="hidden" name="recipe-mode" id="recipe-mode-value" value=""/>
+            </div>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="form-group">
+                    <label>Temperature (°C)</label>
+                    <!-- CHANGED: Replace rolling select with simple text input -->
+                    <input type="text" id="recipe-temp" class="w-full bg-gray-700 border-4 border-gray-500 rounded-xl text-xl px-4 py-3 text-white text-center" style="min-height: 60px;" value="" placeholder="" step="0.1" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                    <span id="recipe-temp-text" class="hidden">37.0</span>
+                </div>
+                <div class="form-group" id="recipe-duration-container">
+                    <label>Duration (MM:SS or HH:MM)</label>
+                    <input class="recipe-time-input w-full bg-gray-700 border-4 border-gray-500 rounded-xl text-xl px-4 py-3 text-white text-center" id="recipe-duration" type="text" value="30:00" placeholder="MM:SS" inputmode="numeric" pattern="[0-9]{1,2}:[0-9]{2}" style="min-height: 60px; touch-action: manipulation; -webkit-overflow-scrolling: auto; overflow: hidden;" onwheel="event.preventDefault(); return false;" onscroll="event.preventDefault(); return false;" onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"/>
+                    <div class="hidden" id="recipe-duration-display"></div>
+                    <input class="hidden" id="recipe-duration-minutes" type="number" value="30"/>
+                </div>
+            </div>
+            <div class="flex gap-4 pt-4">
+                <button type="button" class="w-full action-btn-large bg-green-600 hover:bg-green-700 active:bg-green-800 text-white flex items-center justify-center gap-3 border-4 border-green-700" onclick="saveRecipe()">
+                    <i class="w-8 h-8" data-lucide="save"></i>
+                    <span>SAVE</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="screen main-content" id="screen-edit-date-time" style="background: #000000;">
+    <div class="header-bar" style="background: rgba(0, 0, 0, 0.9);">
+        <div class="flex items-center gap-4">
+            <button class="text-white hover:text-gray-300 p-3 rounded-full hover:bg-gray-800" onclick="navigateTo('settings')">
+                <i class="w-8 h-8" data-lucide="arrow-left"></i>
+            </button>
+            <h1 class="text-white">Edit Date and Time</h1>
+        </div>
+        <p class="clock-display text-white">00:00 | 28-10-2025</p>
+    </div>
+    <div class="centered-content" style="max-width: 700px; margin: 0 auto; padding: 20px;">
+        <!-- Compact Date and Time Section - Side by Side -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <!-- Date Input -->
+            <div style="background: rgba(30, 30, 30, 0.9); border-radius: 16px; padding: 16px; border: 2px solid rgba(255, 255, 255, 0.1);">
+                <label style="font-size: 14px; font-weight: 600; color: #9ca3af; margin-bottom: 8px; display: block;">Date</label>
+                <input 
+                    type="text" 
+                    id="edit-date-input" 
+                    placeholder="DD-MM-YYYY" 
+                    style="width: 100%; background: #000000; border: 2px solid #374151; border-radius: 12px; padding: 12px; font-size: 18px; font-weight: bold; color: white; text-align: center; font-family: 'Courier New', monospace;"
+                    onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"
+                    pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}"
+                />
+                <div id="current-date-text" style="display: none;">01-01-2025</div>
+            </div>
+
+            <!-- Time Input -->
+            <div style="background: rgba(30, 30, 30, 0.9); border-radius: 16px; padding: 16px; border: 2px solid rgba(255, 255, 255, 0.1);">
+                <label style="font-size: 14px; font-weight: 600; color: #9ca3af; margin-bottom: 8px; display: block;">Time</label>
+                <input 
+                    type="text" 
+                    id="edit-time-input" 
+                    placeholder="HH:MM" 
+                    style="width: 100%; background: #000000; border: 2px solid #374151; border-radius: 12px; padding: 12px; font-size: 18px; font-weight: bold; color: white; text-align: center; font-family: 'Courier New', monospace;"
+                    onfocus="if(typeof openOSKForInput === 'function') openOSKForInput(this)"
+                    pattern="[0-9]{2}:[0-9]{2}"
+                />
+                <div id="current-time-text" style="display: none;">00:00</div>
+            </div>
+        </div>
+
+        <!-- Apply Button -->
+        <button onclick="applyEditDateTime()" style="width: 100%; background: #10b981; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 18px; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); border: 2px solid #059669;">
+            <i data-lucide="check" style="width: 20px; height: 20px; display: inline-block; vertical-align: middle; margin-right: 8px;"></i>
+            Apply Date &amp; Time
+        </button>
+    </div>
+</div>

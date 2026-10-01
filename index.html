@@ -945,7 +945,7 @@
                 <i class="text-purple-300" data-lucide="rotate-ccw"></i>
                 <span>Factory Reset</span>
             </button>
-            <button class="bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white settings-btn border-teal-700" onclick="navigateTo('recipe-list')">
+            <button class="bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white settings-btn border-teal-700" onclick="navigateToManageRecipes()">
                 <i class="text-teal-300" data-lucide="book-open"></i>
                 <span>Manage Recipe</span>
             </button>
@@ -1236,10 +1236,10 @@
 <div class="screen main-content" id="screen-recipe-list">
     <div class="header-bar">
         <div class="flex items-center gap-4">
-            <button class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('settings')">
+            <button id="recipe-list-back" class="text-white hover:text-blue-400 p-3 rounded-full hover:bg-gray-700" onclick="navigateTo('settings')">
                 <i class="w-8 h-8" data-lucide="arrow-left"></i>
             </button>
-            <h1>Manage Recipes</h1>
+            <h1 id="recipe-list-title">Manage Recipes</h1>
         </div>
         <p class="clock-display">00:00 | 28-10-2025</p>
     </div>

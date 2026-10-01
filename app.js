@@ -9719,56 +9719,73 @@ var recipes = [];
   })();
 })();
 
+function recipeDurationLabel(r) {
+  if (String(r.mode || '').toLowerCase() === 'manual') return 'Manual';
+  if (r.duration == null || r.duration === '') return '--';
+  var mins = parseFloat(r.duration);
+  if (isNaN(mins)) return '--';
+  var m = Math.floor(mins);
+  var s = Math.round((mins - m) * 60);
+  if (s >= 60) { s = 0; m += 1; }
+  return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
 async function renderRecipeList() {
   var container = document.getElementById('recipe-list-container');
   if (!container) return;
-  
-  // Load recipes from storage
+  var loadOnly = window.recipeListMode === 'load';
+
+  var titleEl = document.getElementById('recipe-list-title');
+  if (titleEl) titleEl.textContent = loadOnly ? 'Load Recipe' : 'Manage Recipes';
+  var createBtn = document.getElementById('btn-create-recipe');
+  if (createBtn) createBtn.style.display = loadOnly ? 'none' : '';
+  var backBtn = document.getElementById('recipe-list-back');
+  if (backBtn) {
+    backBtn.onclick = function () {
+      if (typeof navigateTo === 'function') navigateTo(loadOnly ? 'dashboard' : 'settings');
+    };
+  }
+
   recipes = await StorageAdapter.get('recipes') || [];
-  
+
   container.innerHTML = '';
   if (recipes.length === 0) {
     container.innerHTML = '<p class="text-center text-gray-400 py-8 text-xl">No recipes created yet.</p>';
-        return;
-    }
-    
-  // RBAC: Check permissions for edit/delete actions
+    return;
+  }
+
   var role = getCurrentRole();
-  var canEdit = canAccess(role, 'recipe-edit');
-  var canDelete = canAccess(role, 'recipe-delete');
-    
+  var canEdit = !loadOnly && canAccess(role, 'recipe-edit');
+  var canDelete = !loadOnly && canAccess(role, 'recipe-delete');
+
   var table = document.createElement('table');
   table.className = 'w-full text-left';
-  var thead = '<thead><tr><th>Name</th><th>Temp</th><th>Mode</th><th>Actions</th></tr></thead>';
+  var thead = loadOnly
+    ? '<thead><tr><th>Product Name</th><th>Mode</th><th>Temp °C</th><th>Duration</th><th>Load</th></tr></thead>'
+    : '<thead><tr><th>Product Name</th><th>Mode</th><th>Temp °C</th><th>Duration</th><th>Actions</th></tr></thead>';
   var tbody = document.createElement('tbody');
   table.innerHTML = thead;
   table.appendChild(tbody);
-  
+
   for (var i = 0; i < recipes.length; i++) {
     var r = recipes[i];
     var tr = document.createElement('tr');
     tr.className = 'border-b-2 border-gray-700';
-    var tempStr = r.temp || '37.0';
-    // Remove any 'A' character that might appear
-    tempStr = tempStr.toString().replace(/A/g, '');
-    
-    var modeLabel = (r.mode === 'manual') ? 'Manual' : 'Timer';
-    
-    var actionButtons = '<td class="flex gap-2">';
-    if (canEdit) {
-      actionButtons += '<button onclick="editRecipe(' + i + ')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Edit</button>';
+    var tempStr = (r.temp || '37.0').toString().replace(/A/g, '');
+    var modeLabel = (r.mode === 'manual') ? 'MANUAL' : 'TIMER';
+    var durStr = recipeDurationLabel(r);
+    var name = r.name || '';
+    var actions = '<td>';
+    if (loadOnly) {
+      actions += '<button onclick="selectRecipeForExecution(' + i + ')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Load</button>';
+    } else {
+      actions = '<td class="flex gap-2">';
+      if (canEdit) actions += '<button onclick="editRecipe(' + i + ')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Edit</button>';
+      actions += '<button onclick="selectRecipeForExecution(' + i + ')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Load</button>';
+      if (canDelete) actions += '<button onclick="deleteRecipe(' + i + ')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Delete</button>';
     }
-    // Load button is always available (view action)
-    actionButtons += '<button onclick="selectRecipeForExecution(' + i + ')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Load</button>';
-    if (canDelete) {
-      actionButtons += '<button onclick="deleteRecipe(' + i + ')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Delete</button>';
-    }
-    actionButtons += '</td>';
-    
-    tr.innerHTML = '<td>' + (r.name || '') + '</td>' +
-      '<td>' + tempStr + '°C</td>' +
-      '<td>' + modeLabel + '</td>' +
-      actionButtons;
+    actions += '</td>';
+    tr.innerHTML = '<td>' + name + '</td><td>' + modeLabel + '</td><td>' + tempStr + '</td><td>' + durStr + '</td>' + actions;
     tbody.appendChild(tr);
   }
   container.appendChild(table);
@@ -13823,6 +13840,14 @@ function showRecipeModeMenu() {
 
 function navigateToRecipeList() {
   hideModal();
+  window.recipeListMode = 'load';
+  if (typeof navigateTo === 'function') {
+    navigateTo('recipe-list');
+  }
+}
+
+function navigateToManageRecipes() {
+  window.recipeListMode = 'manage';
   if (typeof navigateTo === 'function') {
     navigateTo('recipe-list');
   }
@@ -13830,6 +13855,7 @@ function navigateToRecipeList() {
 
 function navigateToCreateRecipe() {
   hideModal();
+  window.recipeListMode = 'manage';
   editingRecipeId = null;  // Ensure create-new mode
   if (typeof navigateTo === 'function') {
     navigateTo('create-recipe');
@@ -13838,6 +13864,7 @@ function navigateToCreateRecipe() {
 
 window.showRecipeModeMenu = showRecipeModeMenu;
 window.navigateToRecipeList = navigateToRecipeList;
+window.navigateToManageRecipes = navigateToManageRecipes;
 window.navigateToCreateRecipe = navigateToCreateRecipe;
 
 async function persistMembers(members){

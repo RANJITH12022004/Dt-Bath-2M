@@ -369,28 +369,49 @@ def _parse_user_wall_datetime(dt_str: str) -> datetime:
     return datetime.fromisoformat(clean.replace(" ", "T", 1))
 
 
+def _hwclock_bin() -> str:
+    return "/usr/sbin/hwclock" if os.path.exists("/usr/sbin/hwclock") else "hwclock"
+
+
 def _disable_network_time_sync() -> None:
-    """Keep DS1307 / manual time as the clock source (no NTP overwrite)."""
+    """Keep the hardware RTC / manual time as the clock source (no NTP overwrite)."""
     subprocess.run(
         ["sudo", "/usr/bin/timedatectl", "set-ntp", "false"],
         capture_output=True, text=True, timeout=5, check=False,
     )
     subprocess.run(
-        ["sudo", "/usr/bin/systemctl", "stop", "systemd-timesyncd"],
-        capture_output=True, text=True, timeout=5, check=False,
+        ["sudo", "/usr/bin/systemctl", "disable", "--now", "systemd-timesyncd"],
+        capture_output=True, text=True, timeout=8, check=False,
     )
 
 
-def _write_rtc_wall_datetime(dt: datetime) -> bool:
-    """Persist the exact local wall time into /dev/rtc0 (LocalRTC=yes machine)."""
-    date_arg = dt.strftime("%Y-%m-%d %H:%M:%S")
-    hwclock = "/usr/sbin/hwclock"
-    if not os.path.exists(hwclock):
-        hwclock = "hwclock"
+def _ensure_rtc_stores_utc() -> None:
+    """
+    Raspberry Pi kernel RTC_HCTOSYS always loads the chip as UTC.
+    LocalRTC=yes + writing IST into the chip makes reboot show IST+5:30 (e.g. 12:35 → 18:05).
+    Force UTC-in-RTC so the value written survives reboot as the same wall clock.
+    """
+    subprocess.run(
+        ["sudo", "/usr/bin/timedatectl", "set-local-rtc", "0", "--adjust-system-clock"],
+        capture_output=True, text=True, timeout=8, check=False,
+    )
+
+
+def _read_rtc_sysfs_utc():
+    try:
+        date_s = open("/sys/class/rtc/rtc0/date", encoding="utf-8").read().strip()
+        time_s = open("/sys/class/rtc/rtc0/time", encoding="utf-8").read().strip()
+        return datetime.strptime(date_s + " " + time_s, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return None
+
+
+def _write_rtc_utc_from_system() -> bool:
+    """Copy the current system clock into /dev/rtc0 as UTC (reboot-safe)."""
+    hwclock = _hwclock_bin()
     candidates = [
-        [hwclock, "-f", "/dev/rtc0", "--set", "--date=" + date_arg, "--localtime"],
-        [hwclock, "-f", "/dev/rtc0", "--systohc", "--localtime"],
-        [hwclock, "-f", "/dev/rtc0", "-w", "--localtime"],
+        [hwclock, "-f", "/dev/rtc0", "--systohc", "--utc"],
+        [hwclock, "-f", "/dev/rtc0", "-w", "--utc"],
     ]
     for cmd in candidates:
         try:
@@ -407,7 +428,9 @@ def _write_rtc_wall_datetime(dt: datetime) -> bool:
 
 def _apply_user_wall_datetime(dt: datetime) -> tuple:
     """
-    Apply the exact UI date/time to the system clock and DS1307 RTC.
+    Apply the exact UI local date/time:
+    1) system clock = that local wall time
+    2) DS1307 stores the UTC equivalent (kernel reboot path)
     Returns (ok, applied_str, error_message).
     """
     if sys.platform == "win32":
@@ -415,6 +438,7 @@ def _apply_user_wall_datetime(dt: datetime) -> tuple:
         return True, applied, ""
 
     _disable_network_time_sync()
+    _ensure_rtc_stores_utc()
     final_time = dt.strftime("%Y-%m-%d %H:%M:%S")
     try:
         subprocess.run(
@@ -423,7 +447,6 @@ def _apply_user_wall_datetime(dt: datetime) -> tuple:
         )
     except subprocess.CalledProcessError as e:
         err = (e.stderr or e.stdout or str(e)).strip() or "timedatectl set-time failed"
-        # Fallback for older images
         try:
             subprocess.run(
                 ["sudo", "/usr/bin/date", "-s", final_time],
@@ -433,10 +456,30 @@ def _apply_user_wall_datetime(dt: datetime) -> tuple:
             return False, final_time, err
 
     _disable_network_time_sync()
-    rtc_ok = _write_rtc_wall_datetime(dt)
+    rtc_ok = _write_rtc_utc_from_system()
     if not rtc_ok:
         app.logger.warning("system time set to %s but RTC write failed", final_time)
         return False, final_time, "Failed to write RTC"
+
+    # Verify chip holds UTC for the local wall time just applied.
+    try:
+        local_aware = dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
+        if local_aware.tzinfo is None:
+            # Asia/Kolkata fixed offset fallback
+            from datetime import timedelta
+            local_aware = dt.replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+        wanted_utc = local_aware.astimezone(timezone.utc).replace(tzinfo=None)
+        got_utc = _read_rtc_sysfs_utc()
+        if got_utc is not None and abs((got_utc - wanted_utc).total_seconds()) > 120:
+            app.logger.warning(
+                "RTC UTC mismatch after write: wanted=%s got=%s",
+                wanted_utc.isoformat(sep=" "),
+                got_utc.isoformat(sep=" "),
+            )
+            return False, final_time, "RTC verification failed"
+    except Exception as ex:
+        app.logger.warning("RTC verify skipped: %s", ex)
+
     applied = dt.strftime("%Y-%m-%dT%H:%M:%S")
     return True, applied, ""
 

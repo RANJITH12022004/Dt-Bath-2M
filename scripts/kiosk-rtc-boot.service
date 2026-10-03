@@ -1,0 +1,14 @@
+[Unit]
+Description=Load DS1307 RTC (UTC) into system clock before kiosk starts
+DefaultDependencies=no
+After=systemd-modules-load.service local-fs.target
+Before=sysinit.target bridge.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/kiosk/scripts/kiosk-rtc-boot.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

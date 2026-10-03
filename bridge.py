@@ -352,6 +352,95 @@ def api_stop():
         return jsonify({"error": "E1001", "message": "Device communication failed"}), 500
 
 
+def _parse_user_wall_datetime(dt_str: str) -> datetime:
+    """Parse UI wall-clock datetime. No timezone conversion / offset hacks."""
+    clean = str(dt_str or "").strip().replace("Z", "")
+    if not clean:
+        raise ValueError("missing datetime")
+    # Strip trailing numeric timezone offsets only (keep YYYY-MM-DD intact).
+    if re.search(r"[T\s]\d{2}:\d{2}", clean) and ("+" in clean[10:] or clean.count("-") > 2):
+        clean = re.split(r"[+-]\d{2}:\d{2}$", clean)[0]
+    clean = clean.replace("T", " ", 1).strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(clean, fmt)
+        except ValueError:
+            pass
+    return datetime.fromisoformat(clean.replace(" ", "T", 1))
+
+
+def _disable_network_time_sync() -> None:
+    """Keep DS1307 / manual time as the clock source (no NTP overwrite)."""
+    subprocess.run(
+        ["sudo", "/usr/bin/timedatectl", "set-ntp", "false"],
+        capture_output=True, text=True, timeout=5, check=False,
+    )
+    subprocess.run(
+        ["sudo", "/usr/bin/systemctl", "stop", "systemd-timesyncd"],
+        capture_output=True, text=True, timeout=5, check=False,
+    )
+
+
+def _write_rtc_wall_datetime(dt: datetime) -> bool:
+    """Persist the exact local wall time into /dev/rtc0 (LocalRTC=yes machine)."""
+    date_arg = dt.strftime("%Y-%m-%d %H:%M:%S")
+    hwclock = "/usr/sbin/hwclock"
+    if not os.path.exists(hwclock):
+        hwclock = "hwclock"
+    candidates = [
+        [hwclock, "-f", "/dev/rtc0", "--set", "--date=" + date_arg, "--localtime"],
+        [hwclock, "-f", "/dev/rtc0", "--systohc", "--localtime"],
+        [hwclock, "-f", "/dev/rtc0", "-w", "--localtime"],
+    ]
+    for cmd in candidates:
+        try:
+            proc = subprocess.run(
+                ["sudo"] + cmd,
+                capture_output=True, text=True, timeout=8, check=False,
+            )
+            if proc.returncode == 0:
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _apply_user_wall_datetime(dt: datetime) -> tuple:
+    """
+    Apply the exact UI date/time to the system clock and DS1307 RTC.
+    Returns (ok, applied_str, error_message).
+    """
+    if sys.platform == "win32":
+        applied = dt.strftime("%Y-%m-%dT%H:%M:%S")
+        return True, applied, ""
+
+    _disable_network_time_sync()
+    final_time = dt.strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        subprocess.run(
+            ["sudo", "/usr/bin/timedatectl", "set-time", final_time],
+            capture_output=True, text=True, timeout=8, check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        err = (e.stderr or e.stdout or str(e)).strip() or "timedatectl set-time failed"
+        # Fallback for older images
+        try:
+            subprocess.run(
+                ["sudo", "/usr/bin/date", "-s", final_time],
+                capture_output=True, text=True, timeout=5, check=True,
+            )
+        except Exception:
+            return False, final_time, err
+
+    _disable_network_time_sync()
+    rtc_ok = _write_rtc_wall_datetime(dt)
+    if not rtc_ok:
+        app.logger.warning("system time set to %s but RTC write failed", final_time)
+        return False, final_time, "Failed to write RTC"
+    applied = dt.strftime("%Y-%m-%dT%H:%M:%S")
+    return True, applied, ""
+
+
 @app.route("/api/get_datetime", methods=["GET"])
 def api_get_datetime():
     """Return current system/RTC datetime."""
@@ -379,44 +468,17 @@ def api_set_datetime():
     if not dt_str:
         return jsonify({"ok": False, "error": "Missing datetime parameter"}), 400
     try:
-        # Use ISO string directly – let timedatectl handle timezone properly
-        clean_dt = dt_str.replace('Z', '')
-
-        # Dev/testing on Windows - date -s and timedatectl don't exist
-        if sys.platform == 'win32':
-            return jsonify({"ok": True, "datetime": dt_str})
-
-        # Set system clock properly on Raspberry Pi (Bookworm compatible)
-        try:
-            # Disable NTP so manual time is not overridden
-            subprocess.run(
-                ['sudo', '/usr/bin/timedatectl', 'set-ntp', 'false'],
-                capture_output=True, text=True, timeout=3, check=False
-            )
-
-            # Set system time using timedatectl (this updates system clock)
-            subprocess.run(
-                ['sudo', '/usr/bin/timedatectl', 'set-time', clean_dt],
-                capture_output=True, text=True, timeout=5, check=True
-            )
-
-            # Restart timesync service to ensure RTC sync
-            subprocess.run(
-                ['sudo', '/usr/bin/systemctl', 'restart', 'systemd-timesyncd'],
-                capture_output=True, text=True, timeout=5, check=False
-            )
-
-            return jsonify({"ok": True, "datetime": dt_str})
-
-        except subprocess.CalledProcessError as e:
-            err_msg = (e.stderr or e.stdout or str(e)).strip() or "Failed to set system time"
-            app.logger.warning("set_datetime failed: %s", err_msg)
-            return jsonify({"ok": False, "error": "Failed to set system time"}), 500
+        dt_obj = _parse_user_wall_datetime(dt_str)
+        ok, applied, err = _apply_user_wall_datetime(dt_obj)
+        if not ok:
+            app.logger.warning("set_datetime failed: %s", err)
+            return jsonify({"ok": False, "error": err or "Failed to set system time"}), 500
+        return jsonify({"ok": True, "datetime": applied})
     except ValueError:
-        return jsonify({"error": "Invalid datetime format"}), 400
+        return jsonify({"ok": False, "error": "Invalid datetime format"}), 400
     except Exception as e:
         app.logger.exception("set_datetime failed")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/api/stop1", methods=["POST"])
@@ -2071,47 +2133,25 @@ def api_factory_reset():
 
 @app.route('/api/set_device_datetime', methods=['POST'])
 def api_set_device_datetime():
+    """UI Edit Date/Time: write the exact local wall time to system clock + DS1307."""
     role = request.headers.get('X-User-Role', '').lower()
     if role not in ALLOWED_DATETIME_ROLES:
         return jsonify({'ok': False, 'error': 'forbidden'}), 403
 
     try:
-        from datetime import datetime, timedelta
-
-        data = request.get_json(force=True)
+        data = request.get_json(force=True, silent=True) or {}
         ts = data.get('datetime')
         if not ts:
             return jsonify({'ok': False, 'error': 'missing_datetime'}), 400
 
-        # Remove timezone info (Z or +00:00)
-        clean_ts = ts.replace('Z', '')
-        if '+' in clean_ts:
-            clean_ts = clean_ts.split('+')[0]
-
-        # Parse datetime
-        dt_obj = datetime.fromisoformat(clean_ts)
-
-        # Add 6 hours manually to compensate timezone difference
-        dt_obj = dt_obj + timedelta(hours=6)
-
-        final_time = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
-
-        # Disable NTP
-        subprocess.run(
-            ['sudo', '/usr/bin/timedatectl', 'set-ntp', 'false'],
-            check=False
-        )
-
-        # Set system time
-        subprocess.check_call(
-            ['sudo', '/usr/bin/timedatectl', 'set-time', final_time]
-        )
-
-        return jsonify({'ok': True, 'datetime': final_time})
-
-    except subprocess.CalledProcessError as e:
-        app.logger.exception("timedatectl failed: %s", e)
-        return jsonify({'ok': False, 'error': 'set_time_failed'}), 500
+        dt_obj = _parse_user_wall_datetime(ts)
+        ok, applied, err = _apply_user_wall_datetime(dt_obj)
+        if not ok:
+            app.logger.warning("api_set_device_datetime failed: %s", err)
+            return jsonify({'ok': False, 'error': err or 'set_time_failed'}), 500
+        return jsonify({'ok': True, 'datetime': applied})
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Invalid datetime format'}), 400
     except Exception as e:
         app.logger.exception("api_set_device_datetime failed: %s", e)
         return jsonify({'ok': False, 'error': str(e)}), 500
